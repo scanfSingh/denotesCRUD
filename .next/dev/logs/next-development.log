@@ -3,3 +3,5 @@
 [00:00:05.033] Browser WARN    Image with src "http://localhost:3000/mongodb.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
 [00:00:05.430] Browser WARN    Image with src "http://localhost:3000/vercel.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
 [00:00:05.430] Browser WARN    Image with src "http://localhost:3000/mongodb.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[00:05:38.263] Server  LOG      ✓ Compiled in 96ms
+[00:05:47.862] Server  LOG      ✓ Compiled in 20ms

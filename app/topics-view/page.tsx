@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactElement } from "react";
 import { getTopics, type Topic } from "../actions";
 
 interface TopicNode extends Topic {
@@ -76,7 +76,7 @@ export default function TopicsViewPage() {
     setExpandedNodes(newExpanded);
   };
 
-  const renderTopicCard = (topic: Topic): JSX.Element => {
+  const renderTopicCard = (topic: Topic): ReactElement => {
     const linkedTopicsData = topics.filter((t) =>
       topic.linkedTopics?.includes(t._id!)
     );
@@ -128,7 +128,7 @@ export default function TopicsViewPage() {
     );
   };
 
-  const renderTreeNode = (node: TopicNode, level: number = 0): JSX.Element => {
+  const renderTreeNode = (node: TopicNode, level: number = 0): ReactElement => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node._id!);
 

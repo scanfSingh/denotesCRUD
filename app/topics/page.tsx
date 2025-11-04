@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactElement } from "react";
 import {
   createTopic,
   getTopics,
@@ -213,7 +213,7 @@ export default function TopicsPage() {
     setExpandedNodes(newExpanded);
   };
 
-  const renderTreeNode = (node: TopicNode, level: number = 0): JSX.Element => {
+  const renderTreeNode = (node: TopicNode, level: number = 0): ReactElement => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node._id!);
     const isSelected = selectedTopic?._id === node._id;

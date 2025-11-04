@@ -331,7 +331,7 @@ export async function deleteTopic(topicId: string) {
     // Remove topic from linkedTopics arrays of other topics
     await collection.updateMany(
       { linkedTopics: new ObjectId(topicId) },
-      { $pull: { linkedTopics: new ObjectId(topicId) } }
+      { $pull: { linkedTopics: new ObjectId(topicId) } } as any
     );
 
     // Remove parentTopicId references
@@ -394,12 +394,12 @@ export async function unlinkTopics(topicId: string, linkedTopicId: string) {
     // Remove bidirectional link
     await collection.updateOne(
       { _id: new ObjectId(topicId) },
-      { $pull: { linkedTopics: new ObjectId(linkedTopicId) } }
+      { $pull: { linkedTopics: new ObjectId(linkedTopicId) } } as any
     );
 
     await collection.updateOne(
       { _id: new ObjectId(linkedTopicId) },
-      { $pull: { linkedTopics: new ObjectId(topicId) } }
+      { $pull: { linkedTopics: new ObjectId(topicId) } } as any
     );
 
     revalidatePath("/topics");
