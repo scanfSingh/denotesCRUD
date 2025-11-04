@@ -47,25 +47,38 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$externals$5d2f$mongodb__$5b$external$5d$__$28$mongodb$2c$__cjs$29$__ = __turbopack_context__.i("[externals]/mongodb [external] (mongodb, cjs)");
 ;
-if (!process.env.MONGODB_URI) {
-    throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
-}
-const uri = process.env.MONGODB_URI;
 const options = {
     appName: "devrel.template.nextjs"
 };
-let client;
-if ("TURBOPACK compile-time truthy", 1) {
-    // In development mode, use a global variable so that the value
-    // is preserved across module reloads caused by HMR (Hot Module Replacement).
-    let globalWithMongo = /*TURBOPACK member replacement*/ __turbopack_context__.g;
-    if (!globalWithMongo._mongoClient) {
-        globalWithMongo._mongoClient = new __TURBOPACK__imported__module__$5b$externals$5d2f$mongodb__$5b$external$5d$__$28$mongodb$2c$__cjs$29$__["MongoClient"](uri, options);
+let client = null;
+function getClient() {
+    if (!process.env.MONGODB_URI) {
+        throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
     }
-    client = globalWithMongo._mongoClient;
-} else //TURBOPACK unreachable
-;
-const __TURBOPACK__default__export__ = client;
+    const uri = process.env.MONGODB_URI;
+    if ("TURBOPACK compile-time truthy", 1) {
+        // In development mode, use a global variable so that the value
+        // is preserved across module reloads caused by HMR (Hot Module Replacement).
+        let globalWithMongo = /*TURBOPACK member replacement*/ __turbopack_context__.g;
+        if (!globalWithMongo._mongoClient) {
+            globalWithMongo._mongoClient = new __TURBOPACK__imported__module__$5b$externals$5d2f$mongodb__$5b$external$5d$__$28$mongodb$2c$__cjs$29$__["MongoClient"](uri, options);
+        }
+        return globalWithMongo._mongoClient;
+    } else //TURBOPACK unreachable
+    ;
+}
+// Export a proxy that lazily initializes the client
+const clientProxy = new Proxy({}, {
+    get (_target, prop) {
+        const actualClient = getClient();
+        const value = actualClient[prop];
+        if (typeof value === "function") {
+            return value.bind(actualClient);
+        }
+        return value;
+    }
+});
+const __TURBOPACK__default__export__ = clientProxy;
 }),
 "[project]/denotesCRUD/pages/index.tsx [ssr] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
