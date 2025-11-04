@@ -1,0 +1,20 @@
+{
+  "node": {
+    "00b5db871c0010172d8cf564be84fea8c1aea291f1": {
+      "workers": {
+        "app/topics-view/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics-view/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getTopics",
+          "filename": "denotesCRUD/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/topics-view/page": "action-browser"
+      },
+      "exportedName": "getTopics",
+      "filename": "denotesCRUD/app/actions.ts"
+    }
+  },
+  "edge": {}
+}
