@@ -3,6 +3,27 @@
 import client from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { auth } from "@/lib/auth";
+
+// Helper function to get current user ID
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const session = await auth();
+    if (!session) {
+      console.log("No session found");
+      return null;
+    }
+    const userId = (session?.user?.id as string) || null;
+    if (!userId) {
+      console.log("No user ID in session:", session);
+    }
+    return userId;
+  } catch (error) {
+    console.error("Error getting current user ID:", error);
+    return null;
+  }
+}
 
 export interface Task {
   _id?: string;
@@ -39,9 +60,53 @@ export async function testDatabaseConnection() {
   }
 }
 
+// REGISTER - Register a new user
+export async function registerUser(formData: FormData) {
+  try {
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const name = formData.get("name") as string;
+
+    if (!email || !password) {
+      return { success: false, error: "Email and password are required" };
+    }
+
+    // Check if user already exists
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser) {
+      return { success: false, error: "User already exists" };
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = {
+      email: email.trim(),
+      password: hashedPassword,
+      name: name?.trim() || email.trim(),
+      createdAt: new Date(),
+    };
+
+    await usersCollection.insertOne(newUser);
+    return { success: true };
+  } catch (error) {
+    console.error("Error registering user:", error);
+    return { success: false, error: "Failed to register user" };
+  }
+}
+
 // CREATE - Add a new task
 export async function createTask(formData: FormData) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
@@ -57,6 +122,7 @@ export async function createTask(formData: FormData) {
       title: title.trim(),
       description: description?.trim() || "",
       completed: false,
+      userId: new ObjectId(userId),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -73,12 +139,17 @@ export async function createTask(formData: FormData) {
 // READ - Get all tasks
 export async function getTasks(): Promise<Task[]> {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
 
     const tasks = await collection
-      .find({})
+      .find({ userId: new ObjectId(userId) })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -99,6 +170,11 @@ export async function getTasks(): Promise<Task[]> {
 // UPDATE - Update a task
 export async function updateTask(taskId: string, formData: FormData) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
@@ -119,7 +195,7 @@ export async function updateTask(taskId: string, formData: FormData) {
     };
 
     const result = await collection.updateOne(
-      { _id: new ObjectId(taskId) },
+      { _id: new ObjectId(taskId), userId: new ObjectId(userId) },
       { $set: updateData }
     );
 
@@ -138,11 +214,19 @@ export async function updateTask(taskId: string, formData: FormData) {
 // DELETE - Delete a task
 export async function deleteTask(taskId: string) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
 
-    const result = await collection.deleteOne({ _id: new ObjectId(taskId) });
+    const result = await collection.deleteOne({
+      _id: new ObjectId(taskId),
+      userId: new ObjectId(userId),
+    });
 
     if (result.deletedCount === 0) {
       return { success: false, error: "Task not found" };
@@ -159,12 +243,17 @@ export async function deleteTask(taskId: string) {
 // TOGGLE - Toggle task completion status
 export async function toggleTask(taskId: string, completed: boolean) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
 
     const result = await collection.updateOne(
-      { _id: new ObjectId(taskId) },
+      { _id: new ObjectId(taskId), userId: new ObjectId(userId) },
       { $set: { completed: !completed, updatedAt: new Date() } }
     );
 
@@ -185,6 +274,11 @@ export async function toggleTask(taskId: string, completed: boolean) {
 // CREATE - Add a new topic
 export async function createTopic(formData: FormData) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
@@ -201,6 +295,7 @@ export async function createTopic(formData: FormData) {
       title: title.trim(),
       description: description?.trim() || "",
       linkedTopics: [],
+      userId: new ObjectId(userId),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -221,12 +316,17 @@ export async function createTopic(formData: FormData) {
 // READ - Get all topics with full details
 export async function getTopics(): Promise<Topic[]> {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
 
     const topics = await collection
-      .find({})
+      .find({ userId: new ObjectId(userId) })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -250,11 +350,19 @@ export async function getTopics(): Promise<Topic[]> {
 // READ - Get a single topic by ID
 export async function getTopic(topicId: string): Promise<Topic | null> {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return null;
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
 
-    const topic = await collection.findOne({ _id: new ObjectId(topicId) });
+    const topic = await collection.findOne({
+      _id: new ObjectId(topicId),
+      userId: new ObjectId(userId),
+    });
 
     if (!topic) {
       return null;
@@ -280,6 +388,11 @@ export async function getTopic(topicId: string): Promise<Topic | null> {
 // UPDATE - Update a topic
 export async function updateTopic(topicId: string, formData: FormData) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
@@ -305,7 +418,7 @@ export async function updateTopic(topicId: string, formData: FormData) {
     }
 
     const result = await collection.updateOne(
-      { _id: new ObjectId(topicId) },
+      { _id: new ObjectId(topicId), userId: new ObjectId(userId) },
       { $set: updateData }
     );
 
@@ -324,23 +437,37 @@ export async function updateTopic(topicId: string, formData: FormData) {
 // DELETE - Delete a topic
 export async function deleteTopic(topicId: string) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
 
-    // Remove topic from linkedTopics arrays of other topics
+    // Remove topic from linkedTopics arrays of other topics owned by the same user
     await collection.updateMany(
-      { linkedTopics: new ObjectId(topicId) },
+      {
+        userId: new ObjectId(userId),
+        linkedTopics: new ObjectId(topicId),
+      },
       { $pull: { linkedTopics: new ObjectId(topicId) } } as any
     );
 
-    // Remove parentTopicId references
+    // Remove parentTopicId references for topics owned by the same user
     await collection.updateMany(
-      { parentTopicId: new ObjectId(topicId) },
+      {
+        userId: new ObjectId(userId),
+        parentTopicId: new ObjectId(topicId),
+      },
       { $unset: { parentTopicId: "" } }
     );
 
-    const result = await collection.deleteOne({ _id: new ObjectId(topicId) });
+    const result = await collection.deleteOne({
+      _id: new ObjectId(topicId),
+      userId: new ObjectId(userId),
+    });
 
     if (result.deletedCount === 0) {
       return { success: false, error: "Topic not found" };
@@ -357,6 +484,11 @@ export async function deleteTopic(topicId: string) {
 // LINK - Link a topic to another topic
 export async function linkTopics(topicId: string, linkedTopicId: string) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
@@ -365,14 +497,28 @@ export async function linkTopics(topicId: string, linkedTopicId: string) {
       return { success: false, error: "A topic cannot be linked to itself" };
     }
 
+    // Verify both topics belong to the user
+    const topic = await collection.findOne({
+      _id: new ObjectId(topicId),
+      userId: new ObjectId(userId),
+    });
+    const linkedTopic = await collection.findOne({
+      _id: new ObjectId(linkedTopicId),
+      userId: new ObjectId(userId),
+    });
+
+    if (!topic || !linkedTopic) {
+      return { success: false, error: "Topic not found" };
+    }
+
     // Add bidirectional link
     await collection.updateOne(
-      { _id: new ObjectId(topicId) },
+      { _id: new ObjectId(topicId), userId: new ObjectId(userId) },
       { $addToSet: { linkedTopics: new ObjectId(linkedTopicId) } }
     );
 
     await collection.updateOne(
-      { _id: new ObjectId(linkedTopicId) },
+      { _id: new ObjectId(linkedTopicId), userId: new ObjectId(userId) },
       { $addToSet: { linkedTopics: new ObjectId(topicId) } }
     );
 
@@ -387,18 +533,23 @@ export async function linkTopics(topicId: string, linkedTopicId: string) {
 // UNLINK - Unlink a topic from another topic
 export async function unlinkTopics(topicId: string, linkedTopicId: string) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("topics");
 
     // Remove bidirectional link
     await collection.updateOne(
-      { _id: new ObjectId(topicId) },
+      { _id: new ObjectId(topicId), userId: new ObjectId(userId) },
       { $pull: { linkedTopics: new ObjectId(linkedTopicId) } } as any
     );
 
     await collection.updateOne(
-      { _id: new ObjectId(linkedTopicId) },
+      { _id: new ObjectId(linkedTopicId), userId: new ObjectId(userId) },
       { $pull: { linkedTopics: new ObjectId(topicId) } } as any
     );
 

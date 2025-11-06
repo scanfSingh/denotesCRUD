@@ -11,6 +11,8 @@ import {
   unlinkTopics,
   type Topic,
 } from "../actions";
+import ProtectedRoute from "../components/ProtectedRoute";
+import Navigation from "../components/Navigation";
 
 interface TopicNode extends Topic {
   children?: TopicNode[];
@@ -260,8 +262,10 @@ export default function TopicsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="flex h-screen">
+    <ProtectedRoute>
+      <Navigation />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="flex h-screen">
         {/* Left Sidebar - Hierarchical Topics */}
         <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -514,8 +518,9 @@ export default function TopicsPage() {
             )}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
 

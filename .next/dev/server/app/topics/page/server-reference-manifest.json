@@ -1,6 +1,6 @@
 {
   "node": {
-    "408fb1708826857324fb2c89c2cae6175c7e991c69": {
+    "405e0835951765a3c9268e95d137ee6a3c3c324ce3": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -15,7 +15,7 @@
       "exportedName": "createTopic",
       "filename": "denotesCRUD/app/actions.ts"
     },
-    "00b5db871c0010172d8cf564be84fea8c1aea291f1": {
+    "00ea453b84b59b969ce335144e765338d555b9cb04": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -30,7 +30,7 @@
       "exportedName": "getTopics",
       "filename": "denotesCRUD/app/actions.ts"
     },
-    "40e0a8fb2ae6e652c233b71432bfe36271277bd0ec": {
+    "40227c91ac42117ab70ccd65214f70d7a83351ee23": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -45,7 +45,7 @@
       "exportedName": "getTopic",
       "filename": "denotesCRUD/app/actions.ts"
     },
-    "6033e7acf12dcc200aa73db9bed08078be585348e0": {
+    "6028f4e6b1573c8b03cdd84ecd4a040af92a3eb40a": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -60,7 +60,7 @@
       "exportedName": "updateTopic",
       "filename": "denotesCRUD/app/actions.ts"
     },
-    "4092ab85bf917b0e95604d88937da44e86b96f49d8": {
+    "40b9e79562c403bf4a7c9b1cf3e395e044af96be4d": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -75,7 +75,7 @@
       "exportedName": "deleteTopic",
       "filename": "denotesCRUD/app/actions.ts"
     },
-    "60ae7fc0b06e3f8d85596e7dd3dcfdb01a4a8af60a": {
+    "6058b01dce3c743550c414d97784eee50f980f8cb7": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -90,7 +90,7 @@
       "exportedName": "linkTopics",
       "filename": "denotesCRUD/app/actions.ts"
     },
-    "608d7fd3dca4c415421e58e681d8fe7d0b7f02917f": {
+    "60fdc343d59c25ca73fbaa5cf4c5e7bc2b14798f2a": {
       "workers": {
         "app/topics/page": {
           "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",

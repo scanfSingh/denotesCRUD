@@ -1,7 +1,140 @@
-[00:00:00.753] Server  LOG      ✓ Ready in 473ms
-[00:00:05.033] Browser WARN    Image with src "http://localhost:3000/vercel.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:00:05.033] Browser WARN    Image with src "http://localhost:3000/mongodb.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:00:05.430] Browser WARN    Image with src "http://localhost:3000/vercel.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:00:05.430] Browser WARN    Image with src "http://localhost:3000/mongodb.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:05:38.263] Server  LOG      ✓ Compiled in 96ms
-[00:05:47.862] Server  LOG      ✓ Compiled in 20ms
+[00:00:00.794] Server  LOG      ✓ Ready in 514ms
+[00:00:07.499] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:00:28.326] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:00:35.926] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:00:36.266] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:00:45.500] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:00:45.806] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:01:43.480] Server  LOG      ✓ Compiled in 125ms
+[00:01:52.583] Server  LOG      ✓ Compiled in 45ms
+[00:02:46.202] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:53.995] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:54.317] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:03:50.246] Server  LOG      ✓ Compiled in 69ms
+[00:04:28.287] Server  LOG      ✓ Compiled in 145ms
+[00:04:44.978] Server  LOG      ✓ Compiled in 122ms
+[00:04:56.306] Server  LOG      ✓ Compiled in 30ms
+[00:05:25.935] Server  LOG      ✓ Compiled in 104ms
+[00:05:40.151] Server  LOG      ✓ Compiled in 44ms
+[00:05:49.360] Server  LOG      ✓ Compiled in 28ms
+[00:05:50.446] Browser ERROR   ./denotesCRUD/app/login/page.tsx:164:1
+Parsing ecmascript source code failed
+  162 |     </div>
+  163 |   );
+> 164 | }
+      | ^
+  165 |
+  166 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./denotesCRUD/app/login/page.tsx [Client Component Browser]
+    ./denotesCRUD/app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./denotesCRUD/app/login/page.tsx [Client Component SSR]
+    ./denotesCRUD/app/login/page.tsx [Server Component]
+[00:05:50.450] Browser ERROR   ./denotesCRUD/app/login/page.tsx:164:1
+Parsing ecmascript source code failed
+  162 |     </div>
+  163 |   );
+> 164 | }
+      | ^
+  165 |
+  166 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./denotesCRUD/app/login/page.tsx [Client Component Browser]
+    ./denotesCRUD/app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./denotesCRUD/app/login/page.tsx [Client Component SSR]
+    ./denotesCRUD/app/login/page.tsx [Server Component]
+[00:05:50.452] Browser ERROR   ./denotesCRUD/app/login/page.tsx:164:1
+Parsing ecmascript source code failed
+  162 |     </div>
+  163 |   );
+> 164 | }
+      | ^
+  165 |
+  166 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./denotesCRUD/app/login/page.tsx [Client Component Browser]
+    ./denotesCRUD/app/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./denotesCRUD/app/login/page.tsx [Client Component SSR]
+    ./denotesCRUD/app/login/page.tsx [Server Component]
+[00:06:11.912] Server  LOG      ✓ Compiled in 42ms
+[00:06:22.490] Server  LOG      ✓ Compiled in 52ms
+[00:06:23.457] Browser ERROR   ./denotesCRUD/app/page.tsx:258:1
+Parsing ecmascript source code failed
+  256 |     </div>
+  257 |   );
+> 258 | }
+      | ^
+  259 |
+  260 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./denotesCRUD/app/page.tsx [Client Component Browser]
+    ./denotesCRUD/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./denotesCRUD/app/page.tsx [Client Component SSR]
+    ./denotesCRUD/app/page.tsx [Server Component]
+[00:06:23.457] Browser ERROR   ./denotesCRUD/app/page.tsx:258:1
+Parsing ecmascript source code failed
+  256 |     </div>
+  257 |   );
+> 258 | }
+      | ^
+  259 |
+  260 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./denotesCRUD/app/page.tsx [Client Component Browser]
+    ./denotesCRUD/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./denotesCRUD/app/page.tsx [Client Component SSR]
+    ./denotesCRUD/app/page.tsx [Server Component]
+[00:06:23.457] Browser ERROR   ./denotesCRUD/app/page.tsx:258:1
+Parsing ecmascript source code failed
+  256 |     </div>
+  257 |   );
+> 258 | }
+      | ^
+  259 |
+  260 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./denotesCRUD/app/page.tsx [Client Component Browser]
+    ./denotesCRUD/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./denotesCRUD/app/page.tsx [Client Component SSR]
+    ./denotesCRUD/app/page.tsx [Server Component]
+[00:06:32.225] Server  LOG      ✓ Compiled in 182ms
+[00:06:50.704] Server  LOG      ✓ Compiled in 35ms
+[00:07:39.295] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:07:52.400] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:07:52.728] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!

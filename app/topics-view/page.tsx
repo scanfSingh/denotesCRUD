@@ -2,6 +2,8 @@
 
 import { useState, useEffect, type ReactElement } from "react";
 import { getTopics, type Topic } from "../actions";
+import ProtectedRoute from "../components/ProtectedRoute";
+import Navigation from "../components/Navigation";
 
 interface TopicNode extends Topic {
   children?: TopicNode[];
@@ -169,8 +171,10 @@ export default function TopicsViewPage() {
   const flatTopics = topics;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <ProtectedRoute>
+      <Navigation />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -231,7 +235,8 @@ export default function TopicsViewPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
 
