@@ -216,6 +216,21 @@
       },
       "filename": "denotesCRUD/app/actions.ts",
       "exportedName": "toggleTask"
+    },
+    "00191848106ea4a167864f66feef1f7f5b4b1a7c41": {
+      "workers": {
+        "app/crud/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getAllUsers",
+          "filename": "denotesCRUD/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/crud/page": "action-browser"
+      },
+      "filename": "denotesCRUD/app/actions.ts",
+      "exportedName": "getAllUsers"
     }
   },
   "edge": {},

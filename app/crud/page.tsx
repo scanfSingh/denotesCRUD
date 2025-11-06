@@ -7,22 +7,35 @@ import {
   updateTask,
   deleteTask,
   toggleTask,
+  getAllUsers,
   type Task,
+  type User,
 } from "../actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 
 export default function CrudPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [formData, setFormData] = useState({ title: "", description: "" });
+  const [formData, setFormData] = useState({ title: "", description: "", assignedTo: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadTasks();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      const fetchedUsers = await getAllUsers();
+      setUsers(fetchedUsers);
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    }
+  };
 
   const loadTasks = async () => {
     setLoading(true);
@@ -47,12 +60,15 @@ export default function CrudPage() {
       formDataObj.append("title", formData.title);
       formDataObj.append("description", formData.description);
       formDataObj.append("completed", editingTask.completed.toString());
+      if (formData.assignedTo) {
+        formDataObj.append("assignedTo", formData.assignedTo);
+      }
 
       const result = await updateTask(editingTask._id!, formDataObj);
       if (result.success) {
         setSuccess("Task updated successfully!");
         setEditingTask(null);
-        setFormData({ title: "", description: "" });
+        setFormData({ title: "", description: "", assignedTo: "" });
         await loadTasks();
       } else {
         setError(result.error || "Failed to update task");
@@ -62,11 +78,14 @@ export default function CrudPage() {
       const formDataObj = new FormData();
       formDataObj.append("title", formData.title);
       formDataObj.append("description", formData.description);
+      if (formData.assignedTo) {
+        formDataObj.append("assignedTo", formData.assignedTo);
+      }
 
       const result = await createTask(formDataObj);
       if (result.success) {
         setSuccess("Task created successfully!");
-        setFormData({ title: "", description: "" });
+        setFormData({ title: "", description: "", assignedTo: "" });
         await loadTasks();
       } else {
         setError(result.error || "Failed to create task");
@@ -79,6 +98,7 @@ export default function CrudPage() {
     setFormData({
       title: task.title,
       description: task.description,
+      assignedTo: task.assignedTo || "",
     });
     setError(null);
     setSuccess(null);
@@ -86,7 +106,7 @@ export default function CrudPage() {
 
   const handleCancel = () => {
     setEditingTask(null);
-    setFormData({ title: "", description: "" });
+    setFormData({ title: "", description: "", assignedTo: "" });
     setError(null);
     setSuccess(null);
   };
@@ -186,6 +206,29 @@ export default function CrudPage() {
                 placeholder="Enter task description"
               />
             </div>
+            <div>
+              <label
+                htmlFor="assignedTo"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Assign To (Optional)
+              </label>
+              <select
+                id="assignedTo"
+                value={formData.assignedTo}
+                onChange={(e) =>
+                  setFormData({ ...formData, assignedTo: e.target.value })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="">Unassigned</option>
+                {users.map((user) => (
+                  <option key={user._id} value={user._id}>
+                    {user.name} ({user.email})
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex gap-4">
               <button
                 type="submit"
@@ -258,6 +301,18 @@ export default function CrudPage() {
                           {task.description}
                         </p>
                       )}
+                      <div className="ml-8 mt-2 flex flex-wrap gap-3 text-xs">
+                        {task.createdByName && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Created by: <span className="font-medium">{task.createdByName}</span>
+                          </span>
+                        )}
+                        {task.assignedToName && (
+                          <span className="text-blue-600 dark:text-blue-400 font-medium">
+                            Assigned to: {task.assignedToName}
+                          </span>
+                        )}
+                      </div>
                       {task.createdAt && (
                         <p className="ml-8 text-xs text-gray-400 dark:text-gray-500 mt-2">
                           Created:{" "}

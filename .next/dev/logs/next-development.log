@@ -138,3 +138,159 @@ Import traces:
 [00:07:39.295] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
 [00:07:52.400] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
 [00:07:52.728] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:17:04.154] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:17:09.034] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:17:09.352] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[07:06:17.484] Server  LOG      ✓ Compiled in 464ms
+[07:06:28.102] Browser ERROR   ./denotesCRUD/app/actions.ts:169:5
+Parsing ecmascript source code failed
+  167 |   } catch (error) {
+  168 |     console.error("Error creating task:", error);
+> 169 |     return { success: false, error: "Failed to create task" };
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  170 |   }
+  171 | }
+  172 |
+
+Return statement is not allowed here
+[07:06:28.108] Browser ERROR   ./denotesCRUD/app/actions.ts:169:5
+Parsing ecmascript source code failed
+  167 |   } catch (error) {
+  168 |     console.error("Error creating task:", error);
+> 169 |     return { success: false, error: "Failed to create task" };
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  170 |   }
+  171 | }
+  172 |
+
+Return statement is not allowed here
+[07:06:28.118] Browser ERROR   ./denotesCRUD/app/actions.ts:169:5
+Parsing ecmascript source code failed
+  167 |   } catch (error) {
+  168 |     console.error("Error creating task:", error);
+> 169 |     return { success: false, error: "Failed to create task" };
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  170 |   }
+  171 | }
+  172 |
+
+Return statement is not allowed here
+[07:06:49.103] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:06:49.103] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:06:49.103] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:01.103] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:01.103] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:01.103] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:13.104] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:13.104] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:13.104] Browser ERROR   ./denotesCRUD/app/actions.ts:134:1
+Parsing ecmascript source code failed
+  132 |     }));
+  133 | // CREATE - Add a new task
+> 134 | export async function createTask(formData: FormData) {
+      | ^^^^^^
+  135 |   try {
+  136 |     const userId = await getCurrentUserId();
+  137 |     if (!userId) {
+
+'import', and 'export' cannot be used outside of module code
+[07:07:28.652] Server  LOG      ✓ Compiled in 145ms
+[07:07:50.323] Server  LOG      ✓ Compiled in 44ms
+[07:08:54.722] Server  LOG      ✓ Compiled in 147ms
+[07:09:06.107] Server  LOG      ✓ Compiled in 163ms
+[07:09:24.860] Server  LOG      ✓ Compiled in 237ms
+[07:09:55.131] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[07:09:58.797] Server  LOG     No session found
+[07:09:58.827] Server  LOG     No session found
+[07:09:58.828] Server  LOG     No session found
+[07:09:58.845] Server  LOG     No session found
+[07:10:03.814] Server  LOG     No session found
+[07:10:03.839] Server  LOG     No session found
+[07:10:05.980] Server  LOG     No session found
+[07:10:05.992] Server  LOG     No session found
+[07:10:05.994] Server  LOG     No session found
+[07:10:06.005] Server  LOG     No session found
+[07:10:07.933] Server  LOG     No session found
+[07:10:07.961] Server  LOG     No session found
+[07:10:11.025] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[07:10:11.356] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!

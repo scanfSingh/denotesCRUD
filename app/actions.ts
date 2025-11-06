@@ -30,6 +30,10 @@ export interface Task {
   title: string;
   description: string;
   completed: boolean;
+  assignedTo?: string; // User ID of the assigned user
+  assignedToName?: string; // Name of the assigned user
+  createdBy?: string; // User ID of the creator
+  createdByName?: string; // Name of the creator
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -99,6 +103,39 @@ export async function registerUser(formData: FormData) {
   }
 }
 
+// Get all users (for assignment dropdown)
+export interface User {
+  _id: string;
+  email: string;
+  name: string;
+}
+
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const users = await usersCollection
+      .find({}, { projection: { email: 1, name: 1 } })
+      .toArray();
+
+    return users.map((user) => ({
+      _id: user._id.toString(),
+      email: user.email,
+      name: user.name || user.email,
+    }));
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return [];
+  }
+}
+
 // CREATE - Add a new task
 export async function createTask(formData: FormData) {
   try {
@@ -110,22 +147,46 @@ export async function createTask(formData: FormData) {
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
+    const usersCollection = db.collection("users");
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
+    const assignedToId = formData.get("assignedTo") as string;
 
     if (!title || title.trim() === "") {
       return { success: false, error: "Title is required" };
     }
 
-    const newTask = {
+    // Get creator info
+    const creator = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const createdByName = creator?.name || creator?.email || "Unknown";
+
+    // Get assigned user info if assigned
+    let assignedToName: string | undefined;
+    let assignedToObjId: ObjectId | undefined;
+    if (assignedToId && assignedToId.trim() !== "") {
+      const assignedUser = await usersCollection.findOne({ _id: new ObjectId(assignedToId) });
+      if (assignedUser) {
+        assignedToName = assignedUser.name || assignedUser.email;
+        assignedToObjId = new ObjectId(assignedToId);
+      }
+    }
+
+    const newTask: any = {
       title: title.trim(),
       description: description?.trim() || "",
       completed: false,
-      userId: new ObjectId(userId),
+      userId: new ObjectId(userId), // Keep for backward compatibility
+      createdBy: new ObjectId(userId),
+      createdByName,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    if (assignedToObjId) {
+      newTask.assignedTo = assignedToObjId;
+      newTask.assignedToName = assignedToName;
+    }
 
     const result = await collection.insertOne(newTask);
     revalidatePath("/crud");
@@ -136,7 +197,7 @@ export async function createTask(formData: FormData) {
   }
 }
 
-// READ - Get all tasks
+// READ - Get all tasks (tasks created by or assigned to current user)
 export async function getTasks(): Promise<Task[]> {
   try {
     const userId = await getCurrentUserId();
@@ -147,20 +208,53 @@ export async function getTasks(): Promise<Task[]> {
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
+    const usersCollection = db.collection("users");
 
+    // Get tasks created by user OR assigned to user
     const tasks = await collection
-      .find({ userId: new ObjectId(userId) })
+      .find({
+        $or: [
+          { userId: new ObjectId(userId) },
+          { createdBy: new ObjectId(userId) },
+          { assignedTo: new ObjectId(userId) },
+        ],
+      })
       .sort({ createdAt: -1 })
       .toArray();
 
-    return tasks.map((task) => ({
-      _id: task._id.toString(),
-      title: task.title,
-      description: task.description,
-      completed: task.completed,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-    }));
+    // Map tasks and populate user names if needed
+    const tasksWithNames = await Promise.all(
+      tasks.map(async (task) => {
+        let createdByName = task.createdByName;
+        let assignedToName = task.assignedToName;
+
+        // If names are missing, fetch them
+        if (!createdByName && task.createdBy) {
+          const creator = await usersCollection.findOne({ _id: task.createdBy });
+          createdByName = creator?.name || creator?.email || "Unknown";
+        }
+
+        if (!assignedToName && task.assignedTo) {
+          const assigned = await usersCollection.findOne({ _id: task.assignedTo });
+          assignedToName = assigned?.name || assigned?.email;
+        }
+
+        return {
+          _id: task._id.toString(),
+          title: task.title,
+          description: task.description,
+          completed: task.completed,
+          assignedTo: task.assignedTo?.toString(),
+          assignedToName,
+          createdBy: task.createdBy?.toString() || task.userId?.toString(),
+          createdByName: createdByName || "Unknown",
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+        };
+      })
+    );
+
+    return tasksWithNames;
   } catch (error) {
     console.error("Error fetching tasks:", error);
     return [];
@@ -178,13 +272,41 @@ export async function updateTask(taskId: string, formData: FormData) {
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("tasks");
+    const usersCollection = db.collection("users");
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const completed = formData.get("completed") === "true";
+    const assignedToId = formData.get("assignedTo") as string;
 
     if (!title || title.trim() === "") {
       return { success: false, error: "Title is required" };
+    }
+
+    // Check if user can update this task (creator or assigned user)
+    const task = await collection.findOne({ _id: new ObjectId(taskId) });
+    if (!task) {
+      return { success: false, error: "Task not found" };
+    }
+
+    const canUpdate =
+      task.userId?.toString() === userId ||
+      task.createdBy?.toString() === userId ||
+      task.assignedTo?.toString() === userId;
+
+    if (!canUpdate) {
+      return { success: false, error: "You don't have permission to update this task" };
+    }
+
+    // Get assigned user info if assigned
+    let assignedToName: string | undefined;
+    let assignedToObjId: ObjectId | undefined;
+    if (assignedToId && assignedToId.trim() !== "") {
+      const assignedUser = await usersCollection.findOne({ _id: new ObjectId(assignedToId) });
+      if (assignedUser) {
+        assignedToName = assignedUser.name || assignedUser.email;
+        assignedToObjId = new ObjectId(assignedToId);
+      }
     }
 
     const updateData: any = {
@@ -194,9 +316,21 @@ export async function updateTask(taskId: string, formData: FormData) {
       updatedAt: new Date(),
     };
 
+    if (assignedToObjId) {
+      updateData.assignedTo = assignedToObjId;
+      updateData.assignedToName = assignedToName;
+    }
+
+    const updateQuery: any = { $set: updateData };
+    
+    // Remove assignment if empty
+    if (!assignedToObjId) {
+      updateQuery.$unset = { assignedTo: "", assignedToName: "" };
+    }
+
     const result = await collection.updateOne(
-      { _id: new ObjectId(taskId), userId: new ObjectId(userId) },
-      { $set: updateData }
+      { _id: new ObjectId(taskId) },
+      updateQuery
     );
 
     if (result.matchedCount === 0) {
@@ -223,9 +357,21 @@ export async function deleteTask(taskId: string) {
     const db = mongoClient.db();
     const collection = db.collection("tasks");
 
+    // Check if user can delete this task (creator only)
+    const task = await collection.findOne({ _id: new ObjectId(taskId) });
+    if (!task) {
+      return { success: false, error: "Task not found" };
+    }
+
+    const canDelete =
+      task.userId?.toString() === userId || task.createdBy?.toString() === userId;
+
+    if (!canDelete) {
+      return { success: false, error: "You don't have permission to delete this task" };
+    }
+
     const result = await collection.deleteOne({
       _id: new ObjectId(taskId),
-      userId: new ObjectId(userId),
     });
 
     if (result.deletedCount === 0) {
@@ -252,8 +398,23 @@ export async function toggleTask(taskId: string, completed: boolean) {
     const db = mongoClient.db();
     const collection = db.collection("tasks");
 
+    // Check if user can toggle this task (creator or assigned user)
+    const task = await collection.findOne({ _id: new ObjectId(taskId) });
+    if (!task) {
+      return { success: false, error: "Task not found" };
+    }
+
+    const canToggle =
+      task.userId?.toString() === userId ||
+      task.createdBy?.toString() === userId ||
+      task.assignedTo?.toString() === userId;
+
+    if (!canToggle) {
+      return { success: false, error: "You don't have permission to toggle this task" };
+    }
+
     const result = await collection.updateOne(
-      { _id: new ObjectId(taskId), userId: new ObjectId(userId) },
+      { _id: new ObjectId(taskId) },
       { $set: { completed: !completed, updatedAt: new Date() } }
     );
 
