@@ -22,6 +22,12 @@ export default function CrudPage() {
   const [formData, setFormData] = useState({ title: "", description: "", assignedTo: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
+  const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
+  const [createdByFilter, setCreatedByFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
     loadTasks();
@@ -137,6 +143,30 @@ export default function CrudPage() {
     }
   };
 
+  // Filter tasks based on current filter states
+  const filteredTasks = tasks.filter((task) => {
+    // Status filter
+    if (statusFilter === "completed" && !task.completed) return false;
+    if (statusFilter === "pending" && task.completed) return false;
+
+    // Assigned to filter
+    if (assignedToFilter === "unassigned" && task.assignedTo) return false;
+    if (assignedToFilter !== "all" && assignedToFilter !== "unassigned" && task.assignedTo !== assignedToFilter) return false;
+
+    // Created by filter
+    if (createdByFilter !== "all" && task.createdBy !== createdByFilter) return false;
+
+    // Search filter
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = task.title.toLowerCase().includes(query);
+      const matchesDescription = task.description?.toLowerCase().includes(query) || false;
+      if (!matchesTitle && !matchesDescription) return false;
+    }
+
+    return true;
+  });
+
   return (
     <ProtectedRoute>
       <Navigation />
@@ -251,9 +281,96 @@ export default function CrudPage() {
 
         {/* Tasks List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-            Tasks ({tasks.length})
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              Tasks ({filteredTasks.length} of {tasks.length})
+            </h2>
+            <button
+              onClick={() => {
+                setStatusFilter("all");
+                setAssignedToFilter("all");
+                setCreatedByFilter("all");
+                setSearchQuery("");
+              }}
+              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          {/* Filters Section */}
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Search Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Search
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tasks..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:border-gray-500 dark:text-white text-sm"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as "all" | "completed" | "pending")}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:border-gray-500 dark:text-white text-sm"
+                >
+                  <option value="all">All Tasks</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              {/* Assigned To Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Assigned To
+                </label>
+                <select
+                  value={assignedToFilter}
+                  onChange={(e) => setAssignedToFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:border-gray-500 dark:text-white text-sm"
+                >
+                  <option value="all">All</option>
+                  <option value="unassigned">Unassigned</option>
+                  {users.map((user) => (
+                    <option key={user._id} value={user._id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Created By Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Created By
+                </label>
+                <select
+                  value={createdByFilter}
+                  onChange={(e) => setCreatedByFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:border-gray-500 dark:text-white text-sm"
+                >
+                  <option value="all">All</option>
+                  {users.map((user) => (
+                    <option key={user._id} value={user._id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
           {loading ? (
             <div className="text-center py-8 text-gray-600 dark:text-gray-400">
               Loading tasks...
@@ -262,9 +379,13 @@ export default function CrudPage() {
             <div className="text-center py-8 text-gray-600 dark:text-gray-400">
               No tasks yet. Create your first task above!
             </div>
+          ) : filteredTasks.length === 0 ? (
+            <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+              No tasks match the current filters. Try adjusting your filters.
+            </div>
           ) : (
             <div className="space-y-4">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <div
                   key={task._id}
                   className={`p-4 border rounded-lg transition-all ${
