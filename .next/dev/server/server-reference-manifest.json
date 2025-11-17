@@ -1,109 +1,79 @@
 {
   "node": {
-    "0096f43dbf816fe35c3f54d37504b5951a523db720": {
+    "401cbaf9707cfaf73f70a8bc465fad0720e8a9f6e1": {
       "workers": {
-        "app/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/audio-notes/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/audio-notes/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "testDatabaseConnection",
+          "exportedName": "createNote",
           "filename": "denotesCRUD/app/actions.ts"
         }
       },
       "layer": {
-        "app/page": "action-browser"
+        "app/audio-notes/page": "action-browser"
       },
       "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "testDatabaseConnection"
+      "exportedName": "createNote"
     },
-    "40340ce74bff83c43a0b345e8b76058cbc897dcc54": {
+    "000cef81d10f7b33b382b817bd8e079df0a1dfc865": {
       "workers": {
-        "app/crud/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/audio-notes/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/audio-notes/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "createTask",
+          "exportedName": "getNotes",
           "filename": "denotesCRUD/app/actions.ts"
         }
       },
       "layer": {
-        "app/crud/page": "action-browser"
+        "app/audio-notes/page": "action-browser"
       },
       "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "createTask"
+      "exportedName": "getNotes"
     },
-    "0090aa36c7840a28e870002af05d8b41a3a4424eb7": {
+    "6092284df35dac4f187960ae3e580f1f994fa1d1fe": {
       "workers": {
-        "app/crud/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/audio-notes/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/audio-notes/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getTasks",
+          "exportedName": "updateNote",
           "filename": "denotesCRUD/app/actions.ts"
         }
       },
       "layer": {
-        "app/crud/page": "action-browser"
+        "app/audio-notes/page": "action-browser"
       },
       "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "getTasks"
+      "exportedName": "updateNote"
     },
-    "60f5f0583ef35ba8450edc084ee78c53e8c1927051": {
+    "40625ded61a9f11b56320f330ba8e2e83269d85136": {
       "workers": {
-        "app/crud/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/audio-notes/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/audio-notes/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "updateTask",
+          "exportedName": "deleteNote",
           "filename": "denotesCRUD/app/actions.ts"
         }
       },
       "layer": {
-        "app/crud/page": "action-browser"
+        "app/audio-notes/page": "action-browser"
       },
       "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "updateTask"
+      "exportedName": "deleteNote"
     },
-    "4083d3cf7ede925b0907c55f10167f4b9713bdd084": {
+    "00ea453b84b59b969ce335144e765338d555b9cb04": {
       "workers": {
-        "app/crud/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/audio-notes/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/audio-notes/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "deleteTask",
+          "exportedName": "getTopics",
           "filename": "denotesCRUD/app/actions.ts"
         }
       },
       "layer": {
-        "app/crud/page": "action-browser"
+        "app/audio-notes/page": "action-browser"
       },
       "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "deleteTask"
-    },
-    "609cbd6454a3f2061b543df5bce1aab3d6244e0a88": {
-      "workers": {
-        "app/crud/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "toggleTask",
-          "filename": "denotesCRUD/app/actions.ts"
-        }
-      },
-      "layer": {
-        "app/crud/page": "action-browser"
-      },
-      "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "toggleTask"
-    },
-    "00191848106ea4a167864f66feef1f7f5b4b1a7c41": {
-      "workers": {
-        "app/crud/page": {
-          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/crud/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getAllUsers",
-          "filename": "denotesCRUD/app/actions.ts"
-        }
-      },
-      "layer": {
-        "app/crud/page": "action-browser"
-      },
-      "filename": "denotesCRUD/app/actions.ts",
-      "exportedName": "getAllUsers"
+      "exportedName": "getTopics"
     }
   },
   "edge": {},

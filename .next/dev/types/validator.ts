@@ -56,6 +56,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/audio-notes/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/audio-notes">> = Specific
+  const handler = {} as typeof import("../../../app/audio-notes/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/crud/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/crud">> = Specific
@@ -96,6 +105,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/topics">> = Specific
   const handler = {} as typeof import("../../../app/topics/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/audio/process/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/audio/process">> = Specific
+  const handler = {} as typeof import("../../../app/api/audio/process/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/audio/transcribe/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/audio/transcribe">> = Specific
+  const handler = {} as typeof import("../../../app/api/audio/transcribe/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

@@ -721,3 +721,212 @@ export async function unlinkTopics(topicId: string, linkedTopicId: string) {
     return { success: false, error: "Failed to unlink topics" };
   }
 }
+
+// ========== NOTES CRUD OPERATIONS ==========
+
+export interface Note {
+  _id?: string;
+  title: string;
+  content: string;
+  summary?: string;
+  transcription?: string;
+  topicId?: string;
+  userId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// CREATE - Add a new note
+export async function createNote(formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("notes");
+
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const summary = formData.get("summary") as string;
+    const transcription = formData.get("transcription") as string;
+    const topicId = formData.get("topicId") as string;
+
+    if (!title || title.trim() === "") {
+      return { success: false, error: "Title is required" };
+    }
+
+    const newNote: any = {
+      title: title.trim(),
+      content: content?.trim() || "",
+      summary: summary?.trim() || "",
+      transcription: transcription?.trim() || "",
+      userId: new ObjectId(userId),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (topicId && topicId.trim() !== "") {
+      newNote.topicId = topicId.trim();
+    }
+
+    const result = await collection.insertOne(newNote);
+    revalidatePath("/audio-notes");
+    return { success: true, id: result.insertedId.toString() };
+  } catch (error) {
+    console.error("Error creating note:", error);
+    return { success: false, error: "Failed to create note" };
+  }
+}
+
+// READ - Get all notes
+export async function getNotes(): Promise<Note[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("notes");
+
+    const notes = await collection
+      .find({ userId: new ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return notes.map((note) => ({
+      _id: note._id.toString(),
+      title: note.title,
+      content: note.content || "",
+      summary: note.summary || "",
+      transcription: note.transcription || "",
+      topicId: note.topicId?.toString(),
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    return [];
+  }
+}
+
+// READ - Get a single note by ID
+export async function getNote(noteId: string): Promise<Note | null> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return null;
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("notes");
+
+    const note = await collection.findOne({
+      _id: new ObjectId(noteId),
+      userId: new ObjectId(userId),
+    });
+
+    if (!note) {
+      return null;
+    }
+
+    return {
+      _id: note._id.toString(),
+      title: note.title,
+      content: note.content || "",
+      summary: note.summary || "",
+      transcription: note.transcription || "",
+      topicId: note.topicId?.toString(),
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+    };
+  } catch (error) {
+    console.error("Error fetching note:", error);
+    return null;
+  }
+}
+
+// UPDATE - Update a note
+export async function updateNote(noteId: string, formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("notes");
+
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const summary = formData.get("summary") as string;
+    const topicId = formData.get("topicId") as string;
+
+    if (!title || title.trim() === "") {
+      return { success: false, error: "Title is required" };
+    }
+
+    const updateData: any = {
+      title: title.trim(),
+      content: content?.trim() || "",
+      summary: summary?.trim() || "",
+      updatedAt: new Date(),
+    };
+
+    if (topicId && topicId.trim() !== "") {
+      updateData.topicId = topicId.trim();
+    } else {
+      updateData.topicId = null;
+    }
+
+    const result = await collection.updateOne(
+      { _id: new ObjectId(noteId), userId: new ObjectId(userId) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return { success: false, error: "Note not found" };
+    }
+
+    revalidatePath("/audio-notes");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating note:", error);
+    return { success: false, error: "Failed to update note" };
+  }
+}
+
+// DELETE - Delete a note
+export async function deleteNote(noteId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("notes");
+
+    const result = await collection.deleteOne({
+      _id: new ObjectId(noteId),
+      userId: new ObjectId(userId),
+    });
+
+    if (result.deletedCount === 0) {
+      return { success: false, error: "Note not found" };
+    }
+
+    revalidatePath("/audio-notes");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    return { success: false, error: "Failed to delete note" };
+  }
+}

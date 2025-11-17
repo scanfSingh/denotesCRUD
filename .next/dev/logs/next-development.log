@@ -1,5 +1,4 @@
-[00:00:01.571] Server  LOG      ✓ Ready in 1287ms
-[00:01:17.253] Server  ERROR   MongoServerSelectionError: self-signed certificate in certificate chain
-[00:01:17.259] Server  ERROR   Error fetching tasks: MongoServerSelectionError: self-signed certificate in certificate chain
-[00:01:17.266] Server  ERROR   Error fetching users: MongoServerSelectionError: self-signed certificate in certificate chain
-[00:01:17.270] Server  ERROR   Error fetching tasks: MongoServerSelectionError: self-signed certificate in certificate chain
+[00:00:00.715] Server  LOG      ✓ Ready in 457ms
+[00:00:25.080] Server  LOG      ✓ Compiled in 64ms
+[00:00:38.206] Server  ERROR   Error fetching notes: MongoServerSelectionError: write EPIPE
+[00:01:08.613] Server  ERROR   Error fetching topics: MongoServerSelectionError: write EPIPE

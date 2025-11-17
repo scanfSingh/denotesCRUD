@@ -1,6 +1,11 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, MongoClientOptions } from "mongodb";
 
-const options = { appName: "devrel.template.nextjs" };
+const options: MongoClientOptions = { 
+  appName: "devrel.template.nextjs",
+  // Allow self-signed certificates (useful for local development or certain MongoDB setups)
+  tlsAllowInvalidCertificates: true,
+  tlsAllowInvalidHostnames: true,
+};
 
 let client: MongoClient | null = null;
 
