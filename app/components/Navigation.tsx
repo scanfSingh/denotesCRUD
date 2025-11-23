@@ -15,6 +15,7 @@ export default function Navigation() {
     { href: "/crud", label: "Tasks", icon: "✓" },
     { href: "/topics", label: "Topics", icon: "📝" },
     { href: "/topics-view", label: "View", icon: "👁️" },
+    { href: "/shared-topics", label: "Shared", icon: "🔗" },
     { href: "/audio-notes", label: "Audio Notes", icon: "🎤" },
   ];
 

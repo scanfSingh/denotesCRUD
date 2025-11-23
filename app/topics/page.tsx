@@ -13,6 +13,7 @@ import {
 } from "../actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
+import ShareTopicsModal from "../components/ShareTopicsModal";
 
 interface TopicNode extends Topic {
   children?: TopicNode[];
@@ -31,6 +32,8 @@ export default function TopicsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     loadTopics();
@@ -215,10 +218,43 @@ export default function TopicsPage() {
     setExpandedNodes(newExpanded);
   };
 
+  const toggleTopicSelection = (topicId: string) => {
+    const newSelected = new Set(selectedTopicIds);
+    if (newSelected.has(topicId)) {
+      newSelected.delete(topicId);
+    } else {
+      newSelected.add(topicId);
+    }
+    setSelectedTopicIds(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTopicIds.size === topics.length) {
+      setSelectedTopicIds(new Set());
+    } else {
+      setSelectedTopicIds(new Set(topics.map((t) => t._id!)));
+    }
+  };
+
+  const handleShareClick = () => {
+    if (selectedTopicIds.size === 0) {
+      setError("Please select at least one topic to share");
+      return;
+    }
+    setIsShareModalOpen(true);
+  };
+
+  const handleShareSuccess = () => {
+    setSelectedTopicIds(new Set());
+    setSuccess("Topics shared successfully!");
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
   const renderTreeNode = (node: TopicNode, level: number = 0): ReactElement => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node._id!);
     const isSelected = selectedTopic?._id === node._id;
+    const isChecked = selectedTopicIds.has(node._id!);
 
     return (
       <div key={node._id} className="select-none">
@@ -228,6 +264,16 @@ export default function TopicsPage() {
           }`}
           style={{ paddingLeft: `${level * 20 + 8}px` }}
         >
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={(e) => {
+              e.stopPropagation();
+              toggleTopicSelection(node._id!);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+          />
           {hasChildren && (
             <button
               onClick={(e) => {
@@ -272,18 +318,37 @@ export default function TopicsPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               Topics
             </h2>
-            <button
-              onClick={() => {
-                setEditingTopic(null);
-                setSelectedTopic(null);
-                setFormData({ title: "", description: "", parentTopicId: "" });
-                setError(null);
-                setSuccess(null);
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
-            >
-              + New Topic
-            </button>
+            <div className="flex gap-2 mb-2">
+              <button
+                onClick={() => {
+                  setEditingTopic(null);
+                  setSelectedTopic(null);
+                  setFormData({ title: "", description: "", parentTopicId: "" });
+                  setError(null);
+                  setSuccess(null);
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+              >
+                + New Topic
+              </button>
+              {topics.length > 0 && (
+                <button
+                  onClick={handleSelectAll}
+                  className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors text-sm"
+                  title={selectedTopicIds.size === topics.length ? "Deselect All" : "Select All"}
+                >
+                  {selectedTopicIds.size === topics.length ? "☑" : "☐"}
+                </button>
+              )}
+            </div>
+            {selectedTopicIds.size > 0 && (
+              <button
+                onClick={handleShareClick}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+              >
+                📤 Share ({selectedTopicIds.size})
+              </button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {loading ? (
@@ -517,9 +582,16 @@ export default function TopicsPage() {
               </div>
             )}
           </div>
-        </div>
+          </div>
         </div>
       </div>
+
+      <ShareTopicsModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        selectedTopicIds={Array.from(selectedTopicIds)}
+        onSuccess={handleShareSuccess}
+      />
     </ProtectedRoute>
   );
 }

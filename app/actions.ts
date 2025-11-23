@@ -722,6 +722,253 @@ export async function unlinkTopics(topicId: string, linkedTopicId: string) {
   }
 }
 
+// ========== TOPIC SHARING OPERATIONS ==========
+
+export interface SharedTopic {
+  _id?: string;
+  sharedBy: string; // User ID who shared
+  sharedByName?: string; // Name of user who shared
+  sharedWith: string[]; // Array of user IDs
+  sharedWithNames?: { [userId: string]: string }; // Map of userId to name
+  topicIds: string[]; // Array of topic IDs that were shared
+  topics?: Topic[]; // Populated topic data
+  createdAt?: Date;
+}
+
+// SHARE - Share topics with other users
+export async function shareTopics(topicIds: string[], sharedWithUserIds: string[]) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    if (!topicIds || topicIds.length === 0) {
+      return { success: false, error: "Please select at least one topic to share" };
+    }
+
+    if (!sharedWithUserIds || sharedWithUserIds.length === 0) {
+      return { success: false, error: "Please select at least one user to share with" };
+    }
+
+    // Prevent sharing with yourself
+    if (sharedWithUserIds.includes(userId)) {
+      return { success: false, error: "You cannot share topics with yourself" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const topicsCollection = db.collection("topics");
+    const usersCollection = db.collection("users");
+    const sharedTopicsCollection = db.collection("sharedTopics");
+
+    // Verify all topics belong to the current user
+    const topics = await topicsCollection
+      .find({
+        _id: { $in: topicIds.map((id) => new ObjectId(id)) },
+        userId: new ObjectId(userId),
+      })
+      .toArray();
+
+    if (topics.length !== topicIds.length) {
+      return { success: false, error: "Some topics not found or you don't have permission" };
+    }
+
+    // Verify all users exist
+    const sharedWithUsers = await usersCollection
+      .find({
+        _id: { $in: sharedWithUserIds.map((id) => new ObjectId(id)) },
+      })
+      .toArray();
+
+    if (sharedWithUsers.length !== sharedWithUserIds.length) {
+      return { success: false, error: "Some users not found" };
+    }
+
+    // Get sharer info
+    const sharer = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const sharedByName = sharer?.name || sharer?.email || "Unknown";
+
+    // Create shared topic entries for each recipient
+    const sharedWithNames: { [userId: string]: string } = {};
+    sharedWithUsers.forEach((user) => {
+      sharedWithNames[user._id.toString()] = user.name || user.email;
+    });
+
+    // Create or update shared topic record for each recipient
+    const sharePromises = sharedWithUserIds.map(async (recipientId) => {
+      // Check if there's an existing share from this user to this recipient
+      const existingShare = await sharedTopicsCollection.findOne({
+        sharedBy: new ObjectId(userId),
+        sharedWith: new ObjectId(recipientId),
+      });
+
+      if (existingShare) {
+        // Update existing share - add new topic IDs if not already present
+        const existingTopicIds = (existingShare.topicIds || []).map((id: ObjectId) => id.toString());
+        const newTopicIds = [...new Set([...existingTopicIds, ...topicIds])];
+        
+        await sharedTopicsCollection.updateOne(
+          { _id: existingShare._id },
+          {
+            $set: {
+              topicIds: newTopicIds.map((id) => new ObjectId(id)),
+              updatedAt: new Date(),
+            },
+          }
+        );
+      } else {
+        // Create new share
+        await sharedTopicsCollection.insertOne({
+          sharedBy: new ObjectId(userId),
+          sharedByName,
+          sharedWith: new ObjectId(recipientId),
+          topicIds: topicIds.map((id) => new ObjectId(id)),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    });
+
+    await Promise.all(sharePromises);
+
+    revalidatePath("/topics");
+    revalidatePath("/shared-topics");
+    return { success: true };
+  } catch (error) {
+    console.error("Error sharing topics:", error);
+    return { success: false, error: "Failed to share topics" };
+  }
+}
+
+// GET SHARED TOPICS - Get topics shared with current user
+export async function getSharedTopics(): Promise<SharedTopic[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const sharedTopicsCollection = db.collection("sharedTopics");
+    const topicsCollection = db.collection("topics");
+    const usersCollection = db.collection("users");
+
+    // Find all shares where current user is the recipient
+    const sharedTopics = await sharedTopicsCollection
+      .find({
+        sharedWith: new ObjectId(userId),
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Populate topic data and sharer info
+    const populatedShares = await Promise.all(
+      sharedTopics.map(async (share) => {
+        // Get topic data
+        const topicIds = (share.topicIds || []).map((id: ObjectId) => id.toString());
+        const topics = await topicsCollection
+          .find({
+            _id: { $in: share.topicIds || [] },
+          })
+          .toArray();
+
+        const topicData = topics.map((topic) => ({
+          _id: topic._id.toString(),
+          title: topic.title,
+          description: topic.description || "",
+          linkedTopics: (topic.linkedTopics || []).map((id: ObjectId) => id.toString()),
+          parentTopicId: topic.parentTopicId?.toString(),
+          createdAt: topic.createdAt,
+          updatedAt: topic.updatedAt,
+        }));
+
+        return {
+          _id: share._id.toString(),
+          sharedBy: share.sharedBy.toString(),
+          sharedByName: share.sharedByName || "Unknown",
+          sharedWith: [share.sharedWith.toString()],
+          topicIds,
+          topics: topicData,
+          createdAt: share.createdAt,
+        };
+      })
+    );
+
+    return populatedShares;
+  } catch (error) {
+    console.error("Error fetching shared topics:", error);
+    return [];
+  }
+}
+
+// GET SHARED TOPICS BY ME - Get topics I've shared
+export async function getSharedTopicsByMe(): Promise<SharedTopic[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const sharedTopicsCollection = db.collection("sharedTopics");
+    const topicsCollection = db.collection("topics");
+    const usersCollection = db.collection("users");
+
+    // Find all shares where current user is the sharer
+    const sharedTopics = await sharedTopicsCollection
+      .find({
+        sharedBy: new ObjectId(userId),
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Populate topic data and recipient info
+    const populatedShares = await Promise.all(
+      sharedTopics.map(async (share) => {
+        // Get topic data
+        const topics = await topicsCollection
+          .find({
+            _id: { $in: share.topicIds || [] },
+          })
+          .toArray();
+
+        const topicData = topics.map((topic) => ({
+          _id: topic._id.toString(),
+          title: topic.title,
+          description: topic.description || "",
+          linkedTopics: (topic.linkedTopics || []).map((id: ObjectId) => id.toString()),
+          parentTopicId: topic.parentTopicId?.toString(),
+          createdAt: topic.createdAt,
+          updatedAt: topic.updatedAt,
+        }));
+
+        // Get recipient info
+        const recipient = await usersCollection.findOne({ _id: share.sharedWith });
+        const recipientName = recipient?.name || recipient?.email || "Unknown";
+
+        return {
+          _id: share._id.toString(),
+          sharedBy: share.sharedBy.toString(),
+          sharedByName: share.sharedByName || "Unknown",
+          sharedWith: [share.sharedWith.toString()],
+          sharedWithNames: { [share.sharedWith.toString()]: recipientName },
+          topicIds: (share.topicIds || []).map((id: ObjectId) => id.toString()),
+          topics: topicData,
+          createdAt: share.createdAt,
+        };
+      })
+    );
+
+    return populatedShares;
+  } catch (error) {
+    console.error("Error fetching shared topics by me:", error);
+    return [];
+  }
+}
+
 // ========== NOTES CRUD OPERATIONS ==========
 
 export interface Note {

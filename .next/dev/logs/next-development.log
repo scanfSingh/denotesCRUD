@@ -1,4 +1,9 @@
-[00:00:00.715] Server  LOG      ✓ Ready in 457ms
-[00:00:25.080] Server  LOG      ✓ Compiled in 64ms
-[00:00:38.206] Server  ERROR   Error fetching notes: MongoServerSelectionError: write EPIPE
-[00:01:08.613] Server  ERROR   Error fetching topics: MongoServerSelectionError: write EPIPE
+[00:00:00.847] Server  LOG      ✓ Ready in 580ms
+[00:00:29.160] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:01:23.642] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:01:24.080] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:16.320] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:16.573] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:19.686] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:53.417] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
+[00:02:53.684] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!

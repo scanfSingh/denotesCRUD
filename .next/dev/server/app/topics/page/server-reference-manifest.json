@@ -104,6 +104,36 @@
       },
       "exportedName": "unlinkTopics",
       "filename": "denotesCRUD/app/actions.ts"
+    },
+    "00191848106ea4a167864f66feef1f7f5b4b1a7c41": {
+      "workers": {
+        "app/topics/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getAllUsers",
+          "filename": "denotesCRUD/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/topics/page": "action-browser"
+      },
+      "exportedName": "getAllUsers",
+      "filename": "denotesCRUD/app/actions.ts"
+    },
+    "6027fb578b19c9870bf271585a709df22c502dac29": {
+      "workers": {
+        "app/topics/page": {
+          "moduleId": "[project]/denotesCRUD/.next-internal/server/app/topics/page/actions.js { ACTIONS_MODULE0 => \"[project]/denotesCRUD/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "shareTopics",
+          "filename": "denotesCRUD/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/topics/page": "action-browser"
+      },
+      "exportedName": "shareTopics",
+      "filename": "denotesCRUD/app/actions.ts"
     }
   },
   "edge": {}

@@ -29,11 +29,30 @@ export default function AudioNotesPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [apiStatus, setApiStatus] = useState<"checking" | "ready" | "not_ready">("checking");
 
   useEffect(() => {
     loadNotes();
     loadTopics();
+    checkApiStatus();
   }, []);
+
+  const checkApiStatus = async () => {
+    try {
+      const response = await fetch("/api/audio/test");
+      const data = await response.json();
+      setApiStatus(data.status === "ready" ? "ready" : "not_ready");
+      if (data.status !== "ready") {
+        console.warn("Audio API not fully configured:", data);
+        if (!data.checks.mongodbUri) {
+          setError("MongoDB connection is not configured. Audio transcription will not work.");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check API status:", err);
+      setApiStatus("not_ready");
+    }
+  };
 
   const loadNotes = async () => {
     setLoading(true);
@@ -60,6 +79,21 @@ export default function AudioNotesPage() {
     setProcessing(true);
     setError(null);
     setSuccess(null);
+
+    // Validate audio blob
+    if (!audioBlob || audioBlob.size === 0) {
+      setError("No audio data recorded. Please try again.");
+      setProcessing(false);
+      return;
+    }
+
+    // Check file size (OpenAI has a 25MB limit)
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    if (audioBlob.size > maxSize) {
+      setError("Audio file is too large. Maximum size is 25MB. Please record a shorter audio.");
+      setProcessing(false);
+      return;
+    }
 
     try {
       // Step 1: Transcribe audio
@@ -248,9 +282,21 @@ export default function AudioNotesPage() {
             <div className="lg:col-span-1 space-y-6">
               {/* Audio Recorder */}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Record Audio
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Record Audio
+                  </h2>
+                  {apiStatus === "ready" && (
+                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-medium rounded">
+                      ✓ Ready
+                    </span>
+                  )}
+                  {apiStatus === "not_ready" && (
+                    <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-medium rounded">
+                      ⚠ Check Config
+                    </span>
+                  )}
+                </div>
                 <AudioRecorder
                   onRecordingComplete={handleRecordingComplete}
                   onError={(err) => setError(err)}

@@ -1,4 +1,9 @@
 {
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/audio-notes/page": "app/audio-notes/page.js"
+  "/crud/page": "app/crud/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/shared-topics/page": "app/shared-topics/page.js",
+  "/topics-view/page": "app/topics-view/page.js",
+  "/topics/page": "app/topics/page.js"
 }

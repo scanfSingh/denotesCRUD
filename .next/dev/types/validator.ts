@@ -92,6 +92,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/shared-topics/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/shared-topics">> = Specific
+  const handler = {} as typeof import("../../../app/shared-topics/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/topics-view/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/topics-view">> = Specific
@@ -114,6 +123,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/audio/process">> = Specific
   const handler = {} as typeof import("../../../app/api/audio/process/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/audio/test/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/audio/test">> = Specific
+  const handler = {} as typeof import("../../../app/api/audio/test/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
