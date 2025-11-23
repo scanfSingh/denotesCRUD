@@ -806,7 +806,7 @@ export async function shareTopics(topicIds: string[], sharedWithUserIds: string[
       if (existingShare) {
         // Update existing share - add new topic IDs if not already present
         const existingTopicIds = (existingShare.topicIds || []).map((id: ObjectId) => id.toString());
-        const newTopicIds = [...new Set([...existingTopicIds, ...topicIds])];
+        const newTopicIds = Array.from(new Set([...existingTopicIds, ...topicIds]));
         
         await sharedTopicsCollection.updateOne(
           { _id: existingShare._id },

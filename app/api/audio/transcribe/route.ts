@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import whisper from "whisper-node";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegStatic from "ffmpeg-static";
 import { writeFile, unlink, mkdir } from "fs/promises";
@@ -64,15 +63,22 @@ export async function POST(request: NextRequest) {
     await writeFile(tempInputPath, buffer);
 
     // Convert audio to WAV format with 16kHz sample rate (required by whisper-node)
+    if (!tempInputPath || !tempOutputPath) {
+      throw new Error("Failed to create temporary file paths");
+    }
+    
+    const inputPath = tempInputPath;
+    const outputPath = tempOutputPath;
+    
     await new Promise<void>((resolve, reject) => {
-      ffmpeg(tempInputPath)
+      ffmpeg(inputPath)
         .toFormat("wav")
         .audioFrequency(16000)
         .audioChannels(1)
         .audioCodec("pcm_s16le")
         .on("end", () => resolve())
         .on("error", (err) => reject(err))
-        .save(tempOutputPath!);
+        .save(outputPath);
     });
 
     // Verify whisper setup first
@@ -104,8 +110,10 @@ export async function POST(request: NextRequest) {
     
     let transcript;
     try {
-      // Try using whisper-node first
-      transcript = await whisper(tempOutputPath, {
+      // Try using whisper-node first (dynamic import to avoid build-time initialization)
+      const whisperModule = await import("whisper-node");
+      const whisper = whisperModule.default;
+      transcript = await whisper(outputPath, {
         modelName: "base.en",
       });
     } catch (error: any) {
@@ -116,7 +124,7 @@ export async function POST(request: NextRequest) {
         // Fallback: Use whisper.cpp binary directly
         console.log("Using direct whisper.cpp binary due to path resolution issue");
         
-        const command = `cd "${whisperCppPath}" && ./main -m "${modelPath}" -f "${tempOutputPath}" -ml 1`;
+        const command = `cd "${whisperCppPath}" && ./main -m "${modelPath}" -f "${outputPath}" -ml 1`;
         const { stdout } = await execAsync(command);
         
         // Parse whisper.cpp output (format: [start] --> [end]  text)
