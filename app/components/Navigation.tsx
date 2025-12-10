@@ -17,6 +17,7 @@ export default function Navigation() {
     { href: "/topics-view", label: "View", icon: "👁️" },
     { href: "/shared-topics", label: "Shared", icon: "🔗" },
     { href: "/audio-notes", label: "Audio Notes", icon: "🎤" },
+    { href: "/friends", label: "Friends", icon: "👥" },
   ];
 
   const handleLogout = async () => {

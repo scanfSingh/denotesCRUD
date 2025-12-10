@@ -110,6 +110,7 @@ export interface User {
   name: string;
 }
 
+// Get all users (deprecated - use getFriends for friend-only operations)
 export async function getAllUsers(): Promise<User[]> {
   try {
     const userId = await getCurrentUserId();
@@ -132,6 +133,21 @@ export async function getAllUsers(): Promise<User[]> {
     }));
   } catch (error) {
     console.error("Error fetching users:", error);
+    return [];
+  }
+}
+
+// Get friends for sharing/assignment (only friends)
+export async function getFriendsForSharing(): Promise<User[]> {
+  try {
+    const friends = await getFriends();
+    return friends.map((friend) => ({
+      _id: friend._id,
+      email: friend.email,
+      name: friend.name,
+    }));
+  } catch (error) {
+    console.error("Error fetching friends for sharing:", error);
     return [];
   }
 }
@@ -161,10 +177,23 @@ export async function createTask(formData: FormData) {
     const creator = await usersCollection.findOne({ _id: new ObjectId(userId) });
     const createdByName = creator?.name || creator?.email || "Unknown";
 
-    // Get assigned user info if assigned
+    // Get assigned user info if assigned (only friends can be assigned)
     let assignedToName: string | undefined;
     let assignedToObjId: ObjectId | undefined;
     if (assignedToId && assignedToId.trim() !== "") {
+      // Verify the assigned user is a friend
+      const friendRequestsCollection = db.collection("friendRequests");
+      const friendship = await friendRequestsCollection.findOne({
+        $or: [
+          { from: new ObjectId(userId), to: new ObjectId(assignedToId), status: "accepted" },
+          { to: new ObjectId(userId), from: new ObjectId(assignedToId), status: "accepted" },
+        ],
+      });
+
+      if (!friendship) {
+        return { success: false, error: "You can only assign tasks to your friends" };
+      }
+
       const assignedUser = await usersCollection.findOne({ _id: new ObjectId(assignedToId) });
       if (assignedUser) {
         assignedToName = assignedUser.name || assignedUser.email;
@@ -298,10 +327,23 @@ export async function updateTask(taskId: string, formData: FormData) {
       return { success: false, error: "You don't have permission to update this task" };
     }
 
-    // Get assigned user info if assigned
+    // Get assigned user info if assigned (only friends can be assigned)
     let assignedToName: string | undefined;
     let assignedToObjId: ObjectId | undefined;
     if (assignedToId && assignedToId.trim() !== "") {
+      // Verify the assigned user is a friend
+      const friendRequestsCollection = db.collection("friendRequests");
+      const friendship = await friendRequestsCollection.findOne({
+        $or: [
+          { from: new ObjectId(userId), to: new ObjectId(assignedToId), status: "accepted" },
+          { to: new ObjectId(userId), from: new ObjectId(assignedToId), status: "accepted" },
+        ],
+      });
+
+      if (!friendship) {
+        return { success: false, error: "You can only assign tasks to your friends" };
+      }
+
       const assignedUser = await usersCollection.findOne({ _id: new ObjectId(assignedToId) });
       if (assignedUser) {
         assignedToName = assignedUser.name || assignedUser.email;
@@ -735,7 +777,7 @@ export interface SharedTopic {
   createdAt?: Date;
 }
 
-// SHARE - Share topics with other users
+// SHARE - Share topics with other users (only friends)
 export async function shareTopics(topicIds: string[], sharedWithUserIds: string[]) {
   try {
     const userId = await getCurrentUserId();
@@ -761,6 +803,28 @@ export async function shareTopics(topicIds: string[], sharedWithUserIds: string[
     const topicsCollection = db.collection("topics");
     const usersCollection = db.collection("users");
     const sharedTopicsCollection = db.collection("sharedTopics");
+    const friendRequestsCollection = db.collection("friendRequests");
+
+    // Verify all recipients are friends
+    const friendships = await friendRequestsCollection
+      .find({
+        $or: [
+          { from: new ObjectId(userId), to: { $in: sharedWithUserIds.map((id) => new ObjectId(id)) }, status: "accepted" },
+          { to: new ObjectId(userId), from: { $in: sharedWithUserIds.map((id) => new ObjectId(id)) }, status: "accepted" },
+        ],
+      })
+      .toArray();
+
+    const friendIds = new Set(
+      friendships.map((f) =>
+        f.from.toString() === userId ? f.to.toString() : f.from.toString()
+      )
+    );
+
+    const nonFriendIds = sharedWithUserIds.filter((id) => !friendIds.has(id));
+    if (nonFriendIds.length > 0) {
+      return { success: false, error: "You can only share topics with your friends" };
+    }
 
     // Verify all topics belong to the current user
     const topics = await topicsCollection
@@ -841,7 +905,7 @@ export async function shareTopics(topicIds: string[], sharedWithUserIds: string[
   }
 }
 
-// GET SHARED TOPICS - Get topics shared with current user
+// GET SHARED TOPICS - Get topics shared with current user (only from friends)
 export async function getSharedTopics(): Promise<SharedTopic[]> {
   try {
     const userId = await getCurrentUserId();
@@ -854,11 +918,31 @@ export async function getSharedTopics(): Promise<SharedTopic[]> {
     const sharedTopicsCollection = db.collection("sharedTopics");
     const topicsCollection = db.collection("topics");
     const usersCollection = db.collection("users");
+    const friendRequestsCollection = db.collection("friendRequests");
 
-    // Find all shares where current user is the recipient
+    // Get all friends
+    const friendships = await friendRequestsCollection
+      .find({
+        $or: [
+          { from: new ObjectId(userId), status: "accepted" },
+          { to: new ObjectId(userId), status: "accepted" },
+        ],
+      })
+      .toArray();
+
+    const friendIds = friendships.map((f) =>
+      f.from.toString() === userId ? f.to.toString() : f.from.toString()
+    );
+
+    if (friendIds.length === 0) {
+      return [];
+    }
+
+    // Find all shares where current user is the recipient AND sharer is a friend
     const sharedTopics = await sharedTopicsCollection
       .find({
         sharedWith: new ObjectId(userId),
+        sharedBy: { $in: friendIds.map((id) => new ObjectId(id)) },
       })
       .sort({ createdAt: -1 })
       .toArray();
@@ -1175,5 +1259,417 @@ export async function deleteNote(noteId: string) {
   } catch (error) {
     console.error("Error deleting note:", error);
     return { success: false, error: "Failed to delete note" };
+  }
+}
+
+// ========== FRIEND REQUEST OPERATIONS ==========
+
+export interface FriendRequest {
+  _id?: string;
+  from: string; // User ID who sent the request
+  fromName?: string; // Name of user who sent the request
+  to: string; // User ID who received the request
+  toName?: string; // Name of user who received the request
+  status: "pending" | "accepted" | "rejected";
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface Friend {
+  _id: string;
+  email: string;
+  name: string;
+  friendshipId: string; // ID of the friend request document
+}
+
+// SEND FRIEND REQUEST - Send a friend request to another user
+export async function sendFriendRequest(toUserId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    if (userId === toUserId) {
+      return { success: false, error: "You cannot send a friend request to yourself" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const friendRequestsCollection = db.collection("friendRequests");
+    const usersCollection = db.collection("users");
+
+    // Check if users exist
+    const [fromUser, toUser] = await Promise.all([
+      usersCollection.findOne({ _id: new ObjectId(userId) }),
+      usersCollection.findOne({ _id: new ObjectId(toUserId) }),
+    ]);
+
+    if (!fromUser || !toUser) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Check if there's already a pending or accepted request
+    const existingRequest = await friendRequestsCollection.findOne({
+      $or: [
+        { from: new ObjectId(userId), to: new ObjectId(toUserId) },
+        { from: new ObjectId(toUserId), to: new ObjectId(userId) },
+      ],
+      status: { $in: ["pending", "accepted"] },
+    });
+
+    if (existingRequest) {
+      if (existingRequest.status === "accepted") {
+        return { success: false, error: "You are already friends with this user" };
+      }
+      if (existingRequest.status === "pending") {
+        if (existingRequest.from.toString() === userId) {
+          return { success: false, error: "Friend request already sent" };
+        } else {
+          return { success: false, error: "This user has already sent you a friend request" };
+        }
+      }
+    }
+
+    // Create friend request
+    await friendRequestsCollection.insertOne({
+      from: new ObjectId(userId),
+      fromName: fromUser.name || fromUser.email,
+      to: new ObjectId(toUserId),
+      toName: toUser.name || toUser.email,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    revalidatePath("/friends");
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending friend request:", error);
+    return { success: false, error: "Failed to send friend request" };
+  }
+}
+
+// ACCEPT FRIEND REQUEST - Accept a friend request
+export async function acceptFriendRequest(requestId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const friendRequestsCollection = db.collection("friendRequests");
+
+    // Find the request where current user is the recipient
+    const request = await friendRequestsCollection.findOne({
+      _id: new ObjectId(requestId),
+      to: new ObjectId(userId),
+      status: "pending",
+    });
+
+    if (!request) {
+      return { success: false, error: "Friend request not found or already processed" };
+    }
+
+    // Update request status to accepted
+    await friendRequestsCollection.updateOne(
+      { _id: new ObjectId(requestId) },
+      {
+        $set: {
+          status: "accepted",
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    revalidatePath("/friends");
+    return { success: true };
+  } catch (error) {
+    console.error("Error accepting friend request:", error);
+    return { success: false, error: "Failed to accept friend request" };
+  }
+}
+
+// REJECT FRIEND REQUEST - Reject a friend request
+export async function rejectFriendRequest(requestId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const friendRequestsCollection = db.collection("friendRequests");
+
+    // Find the request where current user is the recipient
+    const request = await friendRequestsCollection.findOne({
+      _id: new ObjectId(requestId),
+      to: new ObjectId(userId),
+      status: "pending",
+    });
+
+    if (!request) {
+      return { success: false, error: "Friend request not found or already processed" };
+    }
+
+    // Update request status to rejected
+    await friendRequestsCollection.updateOne(
+      { _id: new ObjectId(requestId) },
+      {
+        $set: {
+          status: "rejected",
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    revalidatePath("/friends");
+    return { success: true };
+  } catch (error) {
+    console.error("Error rejecting friend request:", error);
+    return { success: false, error: "Failed to reject friend request" };
+  }
+}
+
+// REMOVE FRIEND - Remove a friend (delete the friendship)
+export async function removeFriend(friendId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const friendRequestsCollection = db.collection("friendRequests");
+
+    // Find the friendship (either direction)
+    const friendship = await friendRequestsCollection.findOne({
+      $or: [
+        { from: new ObjectId(userId), to: new ObjectId(friendId), status: "accepted" },
+        { from: new ObjectId(friendId), to: new ObjectId(userId), status: "accepted" },
+      ],
+    });
+
+    if (!friendship) {
+      return { success: false, error: "Friendship not found" };
+    }
+
+    // Delete the friendship
+    await friendRequestsCollection.deleteOne({ _id: friendship._id });
+
+    // Also remove any shared topics between these users
+    const sharedTopicsCollection = db.collection("sharedTopics");
+    await sharedTopicsCollection.deleteMany({
+      $or: [
+        { sharedBy: new ObjectId(userId), sharedWith: new ObjectId(friendId) },
+        { sharedBy: new ObjectId(friendId), sharedWith: new ObjectId(userId) },
+      ],
+    });
+
+    revalidatePath("/friends");
+    revalidatePath("/shared-topics");
+    return { success: true };
+  } catch (error) {
+    console.error("Error removing friend:", error);
+    return { success: false, error: "Failed to remove friend" };
+  }
+}
+
+// GET FRIENDS - Get all friends of current user
+export async function getFriends(): Promise<Friend[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const friendRequestsCollection = db.collection("friendRequests");
+    const usersCollection = db.collection("users");
+
+    // Find all accepted friend requests where user is involved
+    const friendships = await friendRequestsCollection
+      .find({
+        $or: [
+          { from: new ObjectId(userId), status: "accepted" },
+          { to: new ObjectId(userId), status: "accepted" },
+        ],
+      })
+      .toArray();
+
+    // Get friend user IDs
+    const friendIds = friendships.map((friendship) => {
+      if (friendship.from.toString() === userId) {
+        return friendship.to.toString();
+      }
+      return friendship.from.toString();
+    });
+
+    if (friendIds.length === 0) {
+      return [];
+    }
+
+    // Get friend user details
+    const friends = await usersCollection
+      .find({
+        _id: { $in: friendIds.map((id) => new ObjectId(id)) },
+      })
+      .toArray();
+
+    // Map to Friend interface
+    return friends.map((friend) => {
+      const friendship = friendships.find(
+        (f) =>
+          f.from.toString() === friend._id.toString() ||
+          f.to.toString() === friend._id.toString()
+      );
+      return {
+        _id: friend._id.toString(),
+        email: friend.email,
+        name: friend.name || friend.email,
+        friendshipId: friendship?._id.toString() || "",
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching friends:", error);
+    return [];
+  }
+}
+
+// GET PENDING FRIEND REQUESTS - Get pending requests sent to and received by current user
+export async function getPendingFriendRequests(): Promise<{
+  sent: FriendRequest[];
+  received: FriendRequest[];
+}> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { sent: [], received: [] };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const friendRequestsCollection = db.collection("friendRequests");
+
+    // Get requests sent by current user
+    const sentRequests = await friendRequestsCollection
+      .find({
+        from: new ObjectId(userId),
+        status: "pending",
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Get requests received by current user
+    const receivedRequests = await friendRequestsCollection
+      .find({
+        to: new ObjectId(userId),
+        status: "pending",
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return {
+      sent: sentRequests.map((req) => ({
+        _id: req._id.toString(),
+        from: req.from.toString(),
+        fromName: req.fromName,
+        to: req.to.toString(),
+        toName: req.toName,
+        status: req.status,
+        createdAt: req.createdAt,
+        updatedAt: req.updatedAt,
+      })),
+      received: receivedRequests.map((req) => ({
+        _id: req._id.toString(),
+        from: req.from.toString(),
+        fromName: req.fromName,
+        to: req.to.toString(),
+        toName: req.toName,
+        status: req.status,
+        createdAt: req.createdAt,
+        updatedAt: req.updatedAt,
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching pending friend requests:", error);
+    return { sent: [], received: [] };
+  }
+}
+
+// SEARCH USERS - Search for users by email or name (for sending friend requests)
+export async function searchUsers(query: string): Promise<User[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+    const friendRequestsCollection = db.collection("friendRequests");
+
+    // Search users by email or name
+    const searchRegex = new RegExp(query.trim(), "i");
+    const users = await usersCollection
+      .find({
+        _id: { $ne: new ObjectId(userId) },
+        $or: [
+          { email: searchRegex },
+          { name: searchRegex },
+        ],
+      })
+      .limit(10)
+      .toArray();
+
+    // Get current user's friends and pending requests
+    const [friendships, pendingRequests] = await Promise.all([
+      friendRequestsCollection
+        .find({
+          $or: [
+            { from: new ObjectId(userId), status: "accepted" },
+            { to: new ObjectId(userId), status: "accepted" },
+          ],
+        })
+        .toArray(),
+      friendRequestsCollection
+        .find({
+          $or: [
+            { from: new ObjectId(userId), status: "pending" },
+            { to: new ObjectId(userId), status: "pending" },
+          ],
+        })
+        .toArray(),
+    ]);
+
+    const friendIds = new Set(
+      friendships.map((f) =>
+        f.from.toString() === userId ? f.to.toString() : f.from.toString()
+      )
+    );
+    const pendingIds = new Set(
+      pendingRequests.map((f) =>
+        f.from.toString() === userId ? f.to.toString() : f.from.toString()
+      )
+    );
+
+    return users.map((user) => ({
+      _id: user._id.toString(),
+      email: user.email,
+      name: user.name || user.email,
+    }));
+  } catch (error) {
+    console.error("Error searching users:", error);
+    return [];
   }
 }

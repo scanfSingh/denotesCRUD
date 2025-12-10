@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { getAllUsers, shareTopics, type User } from "../actions";
+import { getFriendsForSharing, shareTopics, type User } from "../actions";
 
 interface ShareTopicsModalProps {
   isOpen: boolean;
@@ -32,15 +32,11 @@ export default function ShareTopicsModal({
 
   const loadUsers = async () => {
     try {
-      const fetchedUsers = await getAllUsers();
-      // Filter out current user
-      const currentUserId = (session?.user as any)?.id;
-      const filteredUsers = fetchedUsers.filter(
-        (user) => user._id !== currentUserId
-      );
-      setUsers(filteredUsers);
+      // Only load friends for sharing
+      const fetchedUsers = await getFriendsForSharing();
+      setUsers(fetchedUsers);
     } catch (err) {
-      console.error("Failed to load users:", err);
+      console.error("Failed to load friends:", err);
     }
   };
 
@@ -125,9 +121,10 @@ export default function ShareTopicsModal({
 
           <div className="mb-6 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             {users.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                No users available
-              </p>
+              <div className="text-gray-500 dark:text-gray-400 text-center py-4">
+                <p className="mb-2">No friends available to share with.</p>
+                <p className="text-sm">Add friends first to share topics with them.</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {users.map((user) => (

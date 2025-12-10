@@ -7,7 +7,7 @@ import {
   updateTask,
   deleteTask,
   toggleTask,
-  getAllUsers,
+  getFriendsForSharing,
   type Task,
   type User,
 } from "../actions";
@@ -36,10 +36,11 @@ export default function CrudPage() {
 
   const loadUsers = async () => {
     try {
-      const fetchedUsers = await getAllUsers();
+      // Only load friends for task assignment
+      const fetchedUsers = await getFriendsForSharing();
       setUsers(fetchedUsers);
     } catch (err) {
-      console.error("Failed to load users:", err);
+      console.error("Failed to load friends:", err);
     }
   };
 
