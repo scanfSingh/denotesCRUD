@@ -1,10 +1,20 @@
-[00:00:00.847] Server  LOG      ✓ Ready in 580ms
-[00:00:29.160] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:01:23.642] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:01:24.080] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:02:16.320] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:02:16.573] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:02:19.686] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:02:53.417] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:02:53.684] Server  LOG     Pinged your deployment. You successfully connected to MongoDB!
-[00:06:19.974] Server  LOG      ✓ Compiled in 0ms
+[00:00:00.924] Server  LOG      ✓ Ready in 632ms
+[00:02:34.238] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:02:34.251] Server  ERROR   Error fetching friends: MongoServerSelectionError: write EPIPE
+[00:02:34.262] Server  ERROR   Error fetching pending friend requests: MongoServerSelectionError: write EPIPE
+[00:02:34.270] Server  ERROR   Error fetching friends: MongoServerSelectionError: write EPIPE
+[00:02:34.281] Server  ERROR   Error fetching pending friend requests: MongoServerSelectionError: write EPIPE
+[00:03:04.337] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:03:04.355] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:03:04.367] Server  ERROR   Error fetching tasks: MongoServerSelectionError: write EPIPE
+[00:03:04.380] Server  ERROR   Error fetching friends: MongoServerSelectionError: write EPIPE
+[00:03:04.392] Server  ERROR   Error fetching tasks: MongoServerSelectionError: write EPIPE
+[00:03:34.543] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:03:34.554] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:03:34.569] Server  ERROR   Error fetching friends: MongoServerSelectionError: write EPIPE
+[00:03:34.580] Server  ERROR   Error fetching tasks: MongoServerSelectionError: write EPIPE
+[00:03:34.590] Server  ERROR   Error fetching friends: MongoServerSelectionError: write EPIPE
+[00:04:04.680] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:04:04.692] Server  ERROR   MongoServerSelectionError: write EPIPE
+[00:04:04.705] Server  ERROR   Error fetching tasks: MongoServerSelectionError: write EPIPE
+[00:04:04.716] Server  ERROR   Error fetching friends: MongoServerSelectionError: write EPIPE
