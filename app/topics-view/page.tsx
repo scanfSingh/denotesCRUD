@@ -78,6 +78,18 @@ export default function TopicsViewPage() {
     setExpandedNodes(newExpanded);
   };
 
+  const scrollToTopic = (topicId: string) => {
+    const element = document.getElementById(`topic-card-${topicId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Add a brief highlight effect
+      element.classList.add("ring-2", "ring-purple-500", "ring-offset-2");
+      setTimeout(() => {
+        element.classList.remove("ring-2", "ring-purple-500", "ring-offset-2");
+      }, 2000);
+    }
+  };
+
   const renderTopicCard = (topic: Topic): ReactElement => {
     const linkedTopicsData = topics.filter((t) =>
       topic.linkedTopics?.includes(t._id!)
@@ -86,7 +98,8 @@ export default function TopicsViewPage() {
     return (
       <div
         key={topic._id}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+        id={`topic-card-${topic._id}`}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
       >
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -154,9 +167,12 @@ export default function TopicsViewPage() {
             </button>
           )}
           {!hasChildren && <span className="w-5"></span>}
-          <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
+          <button
+            onClick={() => scrollToTopic(node._id!)}
+            className="flex-1 text-left text-sm font-medium text-gray-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          >
             {node.title}
-          </span>
+          </button>
         </div>
         {hasChildren && isExpanded && (
           <div className="mt-1">
