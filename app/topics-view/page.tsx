@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactElement } from "react";
+import { useState, useEffect, useRef, type ReactElement } from "react";
 import { getTopics, type Topic } from "../actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
@@ -13,6 +13,8 @@ export default function TopicsViewPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [highlightedTopic, setHighlightedTopic] = useState<string | null>(null);
+  const topicRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     loadTopics();
@@ -79,13 +81,17 @@ export default function TopicsViewPage() {
   };
 
   const scrollToTopic = (topicId: string) => {
-    const element = document.getElementById(`topic-card-${topicId}`);
+    const element = topicRefs.current.get(topicId);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-      // Add a brief highlight effect
-      element.classList.add("ring-2", "ring-purple-500", "ring-offset-2");
+      // Calculate position with offset for better visibility
+      const yOffset = -100;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+      
+      // Highlight the topic
+      setHighlightedTopic(topicId);
       setTimeout(() => {
-        element.classList.remove("ring-2", "ring-purple-500", "ring-offset-2");
+        setHighlightedTopic(null);
       }, 2000);
     }
   };
@@ -95,11 +101,17 @@ export default function TopicsViewPage() {
       topic.linkedTopics?.includes(t._id!)
     );
 
+    const isHighlighted = highlightedTopic === topic._id;
+    
     return (
       <div
         key={topic._id}
-        id={`topic-card-${topic._id}`}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+        ref={(el) => {
+          if (el) topicRefs.current.set(topic._id!, el);
+        }}
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300 ${
+          isHighlighted ? "ring-2 ring-purple-500 ring-offset-2 shadow-xl" : ""
+        }`}
       >
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
