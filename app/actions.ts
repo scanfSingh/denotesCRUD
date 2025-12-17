@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 // Helper function to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -1713,15 +1714,36 @@ export async function requestPasswordReset(email: string) {
       used: false,
     });
 
-    // In production, send email with reset link
-    // For now, we'll return the token so it can be displayed/shared
+    // Send email with reset link
     const resetUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
+    
+    try {
+      const emailSent = await sendPasswordResetEmail(
+        user.email,
+        resetUrl,
+        resetToken
+      );
+
+      if (!emailSent) {
+        console.error("Failed to send password reset email");
+        // Still return success to prevent email enumeration
+        return {
+          success: true,
+          message: "If an account exists with this email, a password reset link has been sent.",
+        };
+      }
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      // Still return success to prevent email enumeration
+      return {
+        success: true,
+        message: "If an account exists with this email, a password reset link has been sent.",
+      };
+    }
 
     return {
       success: true,
-      message: "Password reset link generated",
-      resetToken, // Only for development - remove in production
-      resetUrl, // Only for development - remove in production
+      message: "Password reset link has been sent to your email address.",
     };
   } catch (error) {
     console.error("Error requesting password reset:", error);

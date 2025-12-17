@@ -11,30 +11,19 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [resetInfo, setResetInfo] = useState<{
-    resetToken?: string;
-    resetUrl?: string;
-  } | null>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setResetInfo(null);
     setLoading(true);
 
     const result = await requestPasswordReset(email);
 
     if (result.success) {
-      setSuccess(result.message || "Password reset link generated");
-      // In development, show the reset token/URL
-      if (result.resetToken && result.resetUrl) {
-        setResetInfo({
-          resetToken: result.resetToken,
-          resetUrl: result.resetUrl,
-        });
-      }
+      setSuccess(result.message || "Password reset link has been sent to your email address.");
+      setEmail(""); // Clear email field
     } else {
       setError(result.error || "Failed to process password reset request");
     }
@@ -86,41 +75,10 @@ export default function ForgotPasswordPage() {
                 <div className="text-sm text-green-800 dark:text-green-200">
                   {success}
                 </div>
-              </div>
-            )}
-
-            {/* Development: Show reset token and URL */}
-            {resetInfo && (
-              <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
-                  Development Mode - Reset Information:
+                <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                  Please check your email inbox (and spam folder) for the password reset link.
+                  The link will expire in 1 hour.
                 </p>
-                <div className="space-y-2 text-xs">
-                  <div>
-                    <p className="text-blue-800 dark:text-blue-300 font-medium">
-                      Reset URL:
-                    </p>
-                    <a
-                      href={resetInfo.resetUrl}
-                      className="text-blue-600 dark:text-blue-400 hover:underline break-all"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {resetInfo.resetUrl}
-                    </a>
-                  </div>
-                  <div>
-                    <p className="text-blue-800 dark:text-blue-300 font-medium">
-                      Or use token:
-                    </p>
-                    <p className="text-blue-600 dark:text-blue-400 break-all font-mono">
-                      {resetInfo.resetToken}
-                    </p>
-                  </div>
-                  <p className="text-blue-700 dark:text-blue-300 text-xs mt-2">
-                    ⚠️ In production, this would be sent via email
-                  </p>
-                </div>
               </div>
             )}
 
