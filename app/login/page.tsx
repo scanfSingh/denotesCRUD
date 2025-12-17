@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { registerUser } from "../actions";
 import Navigation from "../components/Navigation";
 
@@ -139,6 +140,19 @@ export default function LoginPage() {
               />
             </div>
           </div>
+
+          {isLogin && (
+            <div className="flex items-center justify-end">
+              <div className="text-sm">
+                <Link
+                  href="/forgot-password"
+                  className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">

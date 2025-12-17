@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
+import crypto from "crypto";
 
 // Helper function to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -1671,5 +1672,108 @@ export async function searchUsers(query: string): Promise<User[]> {
   } catch (error) {
     console.error("Error searching users:", error);
     return [];
+  }
+}
+
+// ========== PASSWORD RESET OPERATIONS ==========
+
+// REQUEST PASSWORD RESET - Generate a reset token for a user
+export async function requestPasswordReset(email: string) {
+  try {
+    if (!email || email.trim() === "") {
+      return { success: false, error: "Email is required" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+    const passwordResetsCollection = db.collection("passwordResets");
+
+    // Find user by email
+    const user = await usersCollection.findOne({
+      email: email.trim().toLowerCase(),
+    });
+
+    // Always return success to prevent email enumeration
+    // In production, you would send an email here
+    if (!user) {
+      return { success: true, message: "If an account exists with this email, a password reset link has been sent." };
+    }
+
+    // Generate a secure random token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // Store reset token
+    await passwordResetsCollection.insertOne({
+      userId: user._id,
+      token: resetToken,
+      expiresAt,
+      createdAt: new Date(),
+      used: false,
+    });
+
+    // In production, send email with reset link
+    // For now, we'll return the token so it can be displayed/shared
+    const resetUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
+
+    return {
+      success: true,
+      message: "Password reset link generated",
+      resetToken, // Only for development - remove in production
+      resetUrl, // Only for development - remove in production
+    };
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+    return { success: false, error: "Failed to process password reset request" };
+  }
+}
+
+// RESET PASSWORD - Reset password using a valid token
+export async function resetPassword(token: string, newPassword: string) {
+  try {
+    if (!token || token.trim() === "") {
+      return { success: false, error: "Reset token is required" };
+    }
+
+    if (!newPassword || newPassword.trim().length < 6) {
+      return { success: false, error: "Password must be at least 6 characters long" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const passwordResetsCollection = db.collection("passwordResets");
+    const usersCollection = db.collection("users");
+
+    // Find valid reset token
+    const resetRequest = await passwordResetsCollection.findOne({
+      token: token.trim(),
+      used: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!resetRequest) {
+      return { success: false, error: "Invalid or expired reset token" };
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword.trim(), 10);
+
+    // Update user password
+    await usersCollection.updateOne(
+      { _id: resetRequest.userId },
+      { $set: { password: hashedPassword } }
+    );
+
+    // Mark token as used
+    await passwordResetsCollection.updateOne(
+      { _id: resetRequest._id },
+      { $set: { used: true, usedAt: new Date() } }
+    );
+
+    return { success: true, message: "Password reset successfully" };
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return { success: false, error: "Failed to reset password" };
   }
 }
