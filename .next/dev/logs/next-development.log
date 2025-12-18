@@ -1,4 +1,0 @@
-[00:00:01.640] Server  LOG      ✓ Ready in 1380ms
-[00:00:26.362] Server  ERROR   MongoServerError: bad auth : authentication failed
-[00:00:29.397] Server  ERROR   Error fetching topics: MongoServerError: bad auth : authentication failed
-[00:00:31.499] Server  ERROR   Error fetching topics: MongoServerError: bad auth : authentication failed
