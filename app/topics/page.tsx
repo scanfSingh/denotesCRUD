@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactElement } from "react";
+import { useState, useEffect, useRef, type ReactElement } from "react";
 import {
   createTopic,
   getTopics,
@@ -18,6 +18,318 @@ import RichTextEditor from "../components/RichTextEditor";
 
 interface TopicNode extends Topic {
   children?: TopicNode[];
+}
+
+// Custom Parent Topic Selector Component
+interface ParentTopicSelectorProps {
+  topics: Topic[];
+  selectedId: string;
+  onChange: (id: string) => void;
+  excludeId?: string;
+}
+
+function ParentTopicSelector({ topics, selectedId, onChange, excludeId }: ParentTopicSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Build tree structure
+  const buildTree = (topics: Topic[]): TopicNode[] => {
+    const topicMap = new Map<string, TopicNode>();
+    const rootTopics: TopicNode[] = [];
+
+    topics.forEach((topic) => {
+      topicMap.set(topic._id!, { ...topic, children: [] });
+    });
+
+    topics.forEach((topic) => {
+      const node = topicMap.get(topic._id!)!;
+      if (topic.parentTopicId && topicMap.has(topic.parentTopicId)) {
+        const parent = topicMap.get(topic.parentTopicId)!;
+        if (!parent.children) parent.children = [];
+        parent.children.push(node);
+      } else {
+        rootTopics.push(node);
+      }
+    });
+
+    const sortTopics = (nodes: TopicNode[]) => {
+      nodes.sort((a, b) => a.title.localeCompare(b.title));
+      nodes.forEach((node) => {
+        if (node.children) sortTopics(node.children);
+      });
+    };
+
+    sortTopics(rootTopics);
+    return rootTopics;
+  };
+
+  // Filter topics based on search
+  const filterTree = (nodes: TopicNode[], query: string): TopicNode[] => {
+    if (!query) return nodes;
+    
+    const filtered: TopicNode[] = [];
+    nodes.forEach((node) => {
+      const matchesSearch = node.title.toLowerCase().includes(query.toLowerCase());
+      const filteredChildren = node.children ? filterTree(node.children, query) : [];
+      
+      if (matchesSearch || filteredChildren.length > 0) {
+        filtered.push({
+          ...node,
+          children: filteredChildren.length > 0 ? filteredChildren : node.children,
+        });
+      }
+    });
+    return filtered;
+  };
+
+  const toggleExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newExpanded = new Set(expandedNodes);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedNodes(newExpanded);
+  };
+
+  const handleSelect = (id: string) => {
+    onChange(id);
+    setIsOpen(false);
+    setSearchQuery("");
+  };
+
+  const selectedTopic = topics.find((t) => t._id === selectedId);
+  const topicTree = buildTree(topics.filter((t) => t._id !== excludeId));
+  const filteredTree = filterTree(topicTree, searchQuery);
+
+  // Get path to selected topic for display
+  const getTopicPath = (topicId: string): string[] => {
+    const path: string[] = [];
+    let current = topics.find((t) => t._id === topicId);
+    while (current) {
+      path.unshift(current.title);
+      current = topics.find((t) => t._id === current?.parentTopicId);
+    }
+    return path;
+  };
+
+  const renderTreeNode = (node: TopicNode, level: number = 0): ReactElement => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = expandedNodes.has(node._id!) || searchQuery.length > 0;
+    const isSelected = node._id === selectedId;
+    const isDisabled = node._id === excludeId;
+
+    return (
+      <div key={node._id}>
+        <div
+          onClick={() => !isDisabled && handleSelect(node._id!)}
+          className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-all duration-150 ${
+            isSelected
+              ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+              : isDisabled
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}
+          style={{ paddingLeft: `${level * 20 + 12}px` }}
+        >
+          {hasChildren ? (
+            <button
+              onClick={(e) => toggleExpand(node._id!, e)}
+              className="w-5 h-5 flex items-center justify-center text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+            >
+              <svg
+                className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          ) : (
+            <span className="w-5 h-5 flex items-center justify-center">
+              <span className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+            </span>
+          )}
+          <svg
+            className={`w-4 h-4 flex-shrink-0 ${
+              isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-400"
+            }`}
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+          </svg>
+          <span className="flex-1 text-sm font-medium truncate">{node.title}</span>
+          {isSelected && (
+            <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="border-l border-gray-200 dark:border-gray-700 ml-6">
+            {node.children!.map((child) => renderTreeNode(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      {/* Selected Value Display */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between px-4 py-3 border-2 rounded-xl transition-all duration-200 ${
+          isOpen
+            ? "border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/50"
+            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+        } bg-white dark:bg-gray-800`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          {selectedId ? (
+            <>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                </svg>
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {selectedTopic?.title}
+                </p>
+                {getTopicPath(selectedId).length > 1 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {getTopicPath(selectedId).slice(0, -1).join(" → ")}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                No parent (Root Topic)
+              </span>
+            </>
+          )}
+        </div>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown Panel */}
+      {isOpen && (
+        <div className="absolute z-50 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search topics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-72 overflow-y-auto">
+            {/* Root Option */}
+            <div
+              onClick={() => handleSelect("")}
+              className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 ${
+                selectedId === ""
+                  ? "bg-blue-50 dark:bg-blue-900/30"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">No Parent</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Create as a root topic</p>
+              </div>
+              {selectedId === "" && (
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </div>
+
+            {/* Topic Tree */}
+            {filteredTree.length > 0 ? (
+              <div className="py-2">
+                {filteredTree.map((node) => renderTreeNode(node))}
+              </div>
+            ) : searchQuery ? (
+              <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+                <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm">No topics found</p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function TopicsPage() {
@@ -427,32 +739,16 @@ export default function TopicsPage() {
                 </div>
                 <div>
                   <label
-                    htmlFor="parentTopicId"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >
                     Parent Topic (Optional)
                   </label>
-                  <select
-                    id="parentTopicId"
-                    value={formData.parentTopicId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, parentTopicId: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  >
-                    <option value="">None (Root Topic)</option>
-                    {topics
-                      .filter(
-                        (t) =>
-                          t._id !== editingTopic?._id &&
-                          t._id !== formData.parentTopicId
-                      )
-                      .map((topic) => (
-                        <option key={topic._id} value={topic._id}>
-                          {topic.title}
-                        </option>
-                      ))}
-                  </select>
+                  <ParentTopicSelector
+                    topics={topics}
+                    selectedId={formData.parentTopicId}
+                    onChange={(id) => setFormData({ ...formData, parentTopicId: id })}
+                    excludeId={editingTopic?._id}
+                  />
                 </div>
                 <div className="flex gap-4">
                   <button
