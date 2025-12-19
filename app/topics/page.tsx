@@ -14,6 +14,7 @@ import {
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 import ShareTopicsModal from "../components/ShareTopicsModal";
+import RichTextEditor from "../components/RichTextEditor";
 
 interface TopicNode extends Topic {
   children?: TopicNode[];
@@ -416,15 +417,12 @@ export default function TopicsPage() {
                   >
                     Description
                   </label>
-                  <textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
+                  <RichTextEditor
+                    content={formData.description}
+                    onChange={(html) =>
+                      setFormData({ ...formData, description: html })
                     }
-                    rows={6}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="Enter topic description"
+                    placeholder="Enter topic description..."
                   />
                 </div>
                 <div>
@@ -503,9 +501,16 @@ export default function TopicsPage() {
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Description
                   </h3>
-                  <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
-                    {selectedTopic.description || "No description provided."}
-                  </p>
+                  {selectedTopic.description && selectedTopic.description !== "<p></p>" ? (
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-white"
+                      dangerouslySetInnerHTML={{ __html: selectedTopic.description }}
+                    />
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 italic">
+                      No description provided.
+                    </p>
+                  )}
                 </div>
 
                 {/* Linked Topics */}

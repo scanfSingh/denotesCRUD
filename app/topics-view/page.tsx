@@ -117,10 +117,11 @@ export default function TopicsViewPage() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {topic.title}
           </h2>
-          {topic.description ? (
-            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-              {topic.description}
-            </p>
+          {topic.description && topic.description !== "<p></p>" ? (
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: topic.description }}
+            />
           ) : (
             <p className="text-gray-400 dark:text-gray-500 italic">
               No description provided.
