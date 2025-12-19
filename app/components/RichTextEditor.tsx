@@ -6,7 +6,8 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useCallback } from "react";
+import Image from "@tiptap/extension-image";
+import { useEffect, useCallback, useRef } from "react";
 
 interface RichTextEditorProps {
   content: string;
@@ -14,7 +15,13 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-const MenuBar = ({ editor }: { editor: Editor | null }) => {
+const MenuBar = ({ 
+  editor, 
+  onImageUpload 
+}: { 
+  editor: Editor | null;
+  onImageUpload: () => void;
+}) => {
   if (!editor) {
     return null;
   }
@@ -33,6 +40,14 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     }
 
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  }, [editor]);
+
+  const addImageByUrl = useCallback(() => {
+    const url = window.prompt("Enter image URL");
+
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
   }, [editor]);
 
   return (
@@ -237,6 +252,26 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       <div className="w-px bg-gray-300 dark:bg-gray-500 mx-1" />
 
+      {/* Image */}
+      <button
+        type="button"
+        onClick={addImageByUrl}
+        className="px-2 py-1 rounded text-sm font-medium transition-colors bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-500"
+        title="Add Image from URL"
+      >
+        🖼️
+      </button>
+      <button
+        type="button"
+        onClick={onImageUpload}
+        className="px-2 py-1 rounded text-sm font-medium transition-colors bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-500"
+        title="Upload Image"
+      >
+        📤
+      </button>
+
+      <div className="w-px bg-gray-300 dark:bg-gray-500 mx-1" />
+
       {/* Undo/Redo */}
       <button
         type="button"
@@ -265,6 +300,8 @@ export default function RichTextEditor({
   onChange,
   placeholder = "Enter description...",
 }: RichTextEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -284,6 +321,13 @@ export default function RichTextEditor({
       }),
       Placeholder.configure({
         placeholder,
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "max-w-full h-auto rounded-lg my-4",
+        },
       }),
     ],
     content,
@@ -305,9 +349,50 @@ export default function RichTextEditor({
     }
   }, [content, editor]);
 
+  const handleImageUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file && editor) {
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          alert("Please select an image file");
+          return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          alert("Image size must be less than 5MB");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64 = e.target?.result as string;
+          editor.chain().focus().setImage({ src: base64 }).run();
+        };
+        reader.readAsDataURL(file);
+
+        // Reset input
+        event.target.value = "";
+      }
+    },
+    [editor]
+  );
+
   return (
     <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-      <MenuBar editor={editor} />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
+      <MenuBar editor={editor} onImageUpload={handleImageUpload} />
       <EditorContent editor={editor} />
     </div>
   );

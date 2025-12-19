@@ -143,3 +143,21 @@ body {
 .dark .tiptap a:hover {
   color: #93c5fd;
 }
+
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.tiptap img:hover {
+  transform: scale(1.02);
+}
+
+.tiptap img.ProseMirror-selectednode {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
