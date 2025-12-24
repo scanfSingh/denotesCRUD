@@ -106,11 +106,23 @@ export default function TopicsViewPage() {
 
   const stats = getTopicStats();
 
+  const getParentBreadcrumb = (topicId: string | undefined): Topic[] => {
+    if (!topicId) return [];
+    const path: Topic[] = [];
+    let current = topics.find((t) => t._id === topicId);
+    while (current) {
+      path.unshift(current);
+      current = topics.find((t) => t._id === current?.parentTopicId);
+    }
+    return path;
+  };
+
   const renderTopicCard = (topic: Topic): ReactElement => {
     const linkedTopicsData = topics.filter((t) => topic.linkedTopics?.includes(t._id!));
     const isHighlighted = highlightedTopic === topic._id;
     const isSelected = selectedTopic?._id === topic._id;
     const hasDescription = topic.description && topic.description !== "<p></p>";
+    const parentBreadcrumb = getParentBreadcrumb(topic.parentTopicId);
 
     return (
       <div
@@ -131,6 +143,31 @@ export default function TopicsViewPage() {
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
 
         <div className="p-5">
+          {/* Parent Breadcrumb */}
+          {parentBreadcrumb.length > 0 && (
+            <div className="flex items-center gap-1 mb-3 text-xs text-gray-500 dark:text-gray-400 overflow-x-auto">
+              <svg className="w-3 h-3 flex-shrink-0 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              </svg>
+              {parentBreadcrumb.map((parent, index) => (
+                <span key={parent._id} className="flex items-center gap-1">
+                  {index > 0 && <span className="text-gray-300 dark:text-gray-600">/</span>}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToTopic(parent._id!);
+                      setSelectedTopic(parent);
+                    }}
+                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[100px]"
+                    title={parent.title}
+                  >
+                    {parent.title}
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">

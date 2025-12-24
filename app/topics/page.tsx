@@ -587,6 +587,51 @@ export default function TopicsPage() {
 
                   {/* Content */}
                   <div className="p-6">
+                    {/* Parent Topic Breadcrumb */}
+                    {selectedTopic.parentTopicId && (() => {
+                      const getBreadcrumb = (topicId: string): Topic[] => {
+                        const path: Topic[] = [];
+                        let current = topics.find((t) => t._id === topicId);
+                        while (current) {
+                          path.unshift(current);
+                          current = topics.find((t) => t._id === current?.parentTopicId);
+                        }
+                        return path;
+                      };
+                      const breadcrumb = getBreadcrumb(selectedTopic.parentTopicId);
+                      return breadcrumb.length > 0 ? (
+                        <div className="mb-6">
+                          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Parent Path</h3>
+                          <nav className="flex items-center flex-wrap gap-2 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                            <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                            </svg>
+                            {breadcrumb.map((parent, index) => (
+                              <div key={parent._id} className="flex items-center gap-2">
+                                {index > 0 && (
+                                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                )}
+                                <button
+                                  onClick={() => handleTopicClick(parent._id!)}
+                                  className="px-3 py-1.5 text-sm font-medium text-indigo-700 dark:text-indigo-300 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+                                >
+                                  {parent.title}
+                                </button>
+                              </div>
+                            ))}
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span className="px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-sm">
+                              {selectedTopic.title}
+                            </span>
+                          </nav>
+                        </div>
+                      ) : null;
+                    })()}
+
                     {/* Description */}
                     <div className="mb-8">
                       <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Description</h3>
