@@ -212,13 +212,6 @@ export default function Navigation() {
                     </div>
                   )}
                 </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 mono:text-black hover:bg-gray-100 dark:hover:bg-gray-800 mono:hover:bg-gray-200 transition-all duration-200"
-                >
-                  Logout
-                </button>
               </div>
             ) : (
               <Link
