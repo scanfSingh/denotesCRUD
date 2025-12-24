@@ -386,6 +386,18 @@ export default function ProfilePage() {
               </form>
             )}
           </div>
+
+          {/* App Version */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mono:text-gray-600">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 mono:bg-gray-200 border border-gray-200 dark:border-gray-700 mono:border-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                denotes v{process.env.APP_VERSION || "1.0.0"}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     </>
