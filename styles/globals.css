@@ -13,6 +13,125 @@
   --background-end-rgb: 0, 0, 0;
 }
 
+/* Black & White / Mono Theme */
+.mono {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+}
+
+/* Mono theme overrides - grayscale everything */
+.mono * {
+  --tw-gradient-from: #000 !important;
+  --tw-gradient-to: #000 !important;
+}
+
+.mono .bg-gradient-to-r,
+.mono .bg-gradient-to-br,
+.mono .bg-gradient-to-b {
+  background: #f5f5f5 !important;
+}
+
+.mono .from-indigo-600,
+.mono .from-blue-600,
+.mono .from-purple-600 {
+  --tw-gradient-from: #000 !important;
+}
+
+.mono .to-indigo-600,
+.mono .to-blue-600,
+.mono .to-purple-600 {
+  --tw-gradient-to: #000 !important;
+}
+
+.mono .bg-gradient-to-r.from-indigo-600.to-purple-600,
+.mono .bg-gradient-to-r.from-blue-600.to-indigo-600 {
+  background: #000 !important;
+}
+
+.mono .text-indigo-600,
+.mono .text-blue-600,
+.mono .text-purple-600 {
+  color: #000 !important;
+}
+
+.mono .bg-indigo-50,
+.mono .bg-blue-50,
+.mono .bg-purple-50 {
+  background-color: #e5e5e5 !important;
+}
+
+.mono .border-indigo-200,
+.mono .border-blue-200,
+.mono .border-purple-200 {
+  border-color: #999 !important;
+}
+
+.mono .bg-clip-text {
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+}
+
+.mono .shadow-lg,
+.mono .shadow-xl {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.mono .ring-indigo-500,
+.mono .ring-blue-500 {
+  --tw-ring-color: #000 !important;
+}
+
+.mono .focus\:ring-indigo-500:focus,
+.mono .focus\:ring-blue-500:focus {
+  --tw-ring-color: #000 !important;
+}
+
+.mono input:focus,
+.mono button:focus,
+.mono textarea:focus {
+  --tw-ring-color: #000 !important;
+  border-color: #000 !important;
+}
+
+.mono .bg-green-50 {
+  background-color: #f0f0f0 !important;
+  border: 2px solid #000 !important;
+}
+
+.mono .text-green-800,
+.mono .text-green-500 {
+  color: #000 !important;
+}
+
+.mono .bg-red-50 {
+  background-color: #f5f5f5 !important;
+  border: 2px dashed #000 !important;
+}
+
+.mono .text-red-800,
+.mono .text-red-600,
+.mono .text-red-500 {
+  color: #000 !important;
+}
+
+.mono .border-red-500 {
+  border-color: #000 !important;
+  border-width: 2px !important;
+}
+
+.mono nav {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 2px solid #000 !important;
+}
+
+.mono .rounded-full {
+  background: #000 !important;
+  color: #fff !important;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(

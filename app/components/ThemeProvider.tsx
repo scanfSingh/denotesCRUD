@@ -2,12 +2,12 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark" | "mono" | "system";
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  resolvedTheme: "light" | "dark";
+  resolvedTheme: "light" | "dark" | "mono";
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -22,7 +22,7 @@ export function useTheme() {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark" | "mono">("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -38,8 +38,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const root = document.documentElement;
     
-    const applyTheme = (resolvedValue: "light" | "dark") => {
-      root.classList.remove("light", "dark");
+    const applyTheme = (resolvedValue: "light" | "dark" | "mono") => {
+      root.classList.remove("light", "dark", "mono");
       root.classList.add(resolvedValue);
       setResolvedTheme(resolvedValue);
     };
@@ -78,4 +78,3 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   );
 }
-
