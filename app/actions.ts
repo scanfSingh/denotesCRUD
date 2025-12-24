@@ -105,6 +105,107 @@ export async function registerUser(formData: FormData) {
   }
 }
 
+// PROFILE - Get current user profile
+export interface UserProfile {
+  _id: string;
+  email: string;
+  name: string;
+  createdAt: Date;
+}
+
+export async function getUserProfile(): Promise<UserProfile | null> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return null;
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const user = await usersCollection.findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { email: 1, name: 1, createdAt: 1 } }
+    );
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      _id: user._id.toString(),
+      email: user.email,
+      name: user.name || user.email,
+      createdAt: user.createdAt,
+    };
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return null;
+  }
+}
+
+// PROFILE - Update current user profile
+export async function updateUserProfile(formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const name = formData.get("name") as string;
+    const currentPassword = formData.get("currentPassword") as string;
+    const newPassword = formData.get("newPassword") as string;
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const updateData: Record<string, unknown> = {};
+
+    // Update name if provided
+    if (name && name.trim()) {
+      updateData.name = name.trim();
+    }
+
+    // Update password if provided
+    if (newPassword) {
+      if (!currentPassword) {
+        return { success: false, error: "Current password is required to change password" };
+      }
+
+      // Verify current password
+      const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+      if (!user) {
+        return { success: false, error: "User not found" };
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password as string);
+      if (!isPasswordValid) {
+        return { success: false, error: "Current password is incorrect" };
+      }
+
+      // Hash new password
+      updateData.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return { success: false, error: "No changes provided" };
+    }
+
+    await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { ...updateData, updatedAt: new Date() } }
+    );
+
+    revalidatePath("/profile");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return { success: false, error: "Failed to update profile" };
+  }
+}
+
 // Get all users (for assignment dropdown)
 export interface User {
   _id: string;

@@ -61,12 +61,25 @@ export default function Navigation() {
 
             {/* Auth Links */}
             {status === "authenticated" ? (
-              <button
-                onClick={handleLogout}
-                className="ml-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-              >
-                Logout
-              </button>
+              <div className="flex items-center gap-1 ml-2">
+                <Link
+                  href="/profile"
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive("/profile")
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <span className="hidden sm:inline">Profile</span>
+                  <span className="sm:hidden">👤</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                >
+                  Logout
+                </button>
+              </div>
             ) : (
               <Link
                 href="/login"
