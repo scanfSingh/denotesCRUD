@@ -111,6 +111,8 @@ export interface UserProfile {
   email: string;
   name: string;
   createdAt: Date;
+  provider?: string; // 'google' for OAuth users, undefined for email/password users
+  image?: string;
 }
 
 export async function getUserProfile(): Promise<UserProfile | null> {
@@ -126,7 +128,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
     const user = await usersCollection.findOne(
       { _id: new ObjectId(userId) },
-      { projection: { email: 1, name: 1, createdAt: 1 } }
+      { projection: { email: 1, name: 1, createdAt: 1, provider: 1, image: 1 } }
     );
 
     if (!user) {
@@ -138,6 +140,8 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       email: user.email,
       name: user.name || user.email,
       createdAt: user.createdAt,
+      provider: user.provider,
+      image: user.image,
     };
   } catch (error) {
     console.error("Error fetching user profile:", error);
