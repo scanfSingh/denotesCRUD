@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendTopicSharedEmail, sendFriendRequestEmail, sendTaskAssignedEmail } from "@/lib/email";
 
 // Helper function to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -321,6 +321,23 @@ export async function createTask(formData: FormData) {
     }
 
     const result = await collection.insertOne(newTask);
+
+    // Send email notification if task is assigned to someone else
+    if (assignedToObjId && assignedToId !== userId) {
+      const assignedUser = await usersCollection.findOne({ _id: assignedToObjId });
+      if (assignedUser?.email) {
+        sendTaskAssignedEmail(
+          assignedUser.email,
+          assignedUser.name || assignedUser.email,
+          createdByName,
+          title.trim(),
+          description?.trim()
+        ).catch((error) => {
+          console.error("Failed to send task assignment email:", error);
+        });
+      }
+    }
+
     revalidatePath("/crud");
     return { success: true, id: result.insertedId.toString() };
   } catch (error) {
@@ -480,6 +497,26 @@ export async function updateTask(taskId: string, formData: FormData) {
 
     if (result.matchedCount === 0) {
       return { success: false, error: "Task not found" };
+    }
+
+    // Send email notification if task is newly assigned to someone (different from before)
+    const previousAssignee = task.assignedTo?.toString();
+    if (assignedToObjId && assignedToId !== userId && assignedToId !== previousAssignee) {
+      const assignedUser = await usersCollection.findOne({ _id: assignedToObjId });
+      const updater = await usersCollection.findOne({ _id: new ObjectId(userId) });
+      const updaterName = updater?.name || updater?.email || "Someone";
+      
+      if (assignedUser?.email) {
+        sendTaskAssignedEmail(
+          assignedUser.email,
+          assignedUser.name || assignedUser.email,
+          updaterName,
+          title.trim(),
+          description?.trim()
+        ).catch((error) => {
+          console.error("Failed to send task assignment email:", error);
+        });
+      }
     }
 
     revalidatePath("/crud");
@@ -999,6 +1036,24 @@ export async function shareTopics(topicIds: string[], sharedWithUserIds: string[
 
     await Promise.all(sharePromises);
 
+    // Send email notifications to recipients
+    const topicTitles = topics.map((t) => t.title);
+    const emailPromises = sharedWithUsers.map(async (user) => {
+      try {
+        await sendTopicSharedEmail(
+          user.email,
+          user.name || user.email,
+          sharedByName,
+          topicTitles
+        );
+      } catch (error) {
+        console.error(`Failed to send topic share email to ${user.email}:`, error);
+      }
+    });
+    
+    // Don't wait for emails to complete - send in background
+    Promise.all(emailPromises).catch(console.error);
+
     revalidatePath("/topics");
     revalidatePath("/shared-topics");
     return { success: true };
@@ -1443,6 +1498,15 @@ export async function sendFriendRequest(toUserId: string) {
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date(),
+    });
+
+    // Send email notification to recipient (in background)
+    sendFriendRequestEmail(
+      toUser.email,
+      toUser.name || toUser.email,
+      fromUser.name || fromUser.email
+    ).catch((error) => {
+      console.error("Failed to send friend request email:", error);
     });
 
     revalidatePath("/friends");

@@ -114,3 +114,161 @@ export async function sendPasswordResetEmail(
   });
 }
 
+// Send notification when topics are shared
+export async function sendTopicSharedEmail(
+  recipientEmail: string,
+  recipientName: string,
+  sharerName: string,
+  topicTitles: string[]
+): Promise<boolean> {
+  const subject = `${sharerName} shared topics with you - Denotes`;
+  const topicList = topicTitles.map((t) => `<li style="padding: 8px 0; border-bottom: 1px solid #eee;">${t}</li>`).join("");
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">📚 Topics Shared With You</h1>
+      </div>
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
+        <p style="font-size: 16px; margin-bottom: 20px;">Hi ${recipientName},</p>
+        <p style="font-size: 16px; margin-bottom: 20px;">
+          <strong>${sharerName}</strong> has shared ${topicTitles.length} topic${topicTitles.length > 1 ? "s" : ""} with you:
+        </p>
+        <ul style="background: white; border-radius: 8px; padding: 15px 25px; list-style: none; margin: 20px 0;">
+          ${topicList}
+        </ul>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/shared-topics" 
+             style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    font-weight: bold; 
+                    display: inline-block;">
+            View Shared Topics
+          </a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center;">
+          This is an automated notification from Denotes.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({ to: recipientEmail, subject, html });
+}
+
+// Send notification when friend request is received
+export async function sendFriendRequestEmail(
+  recipientEmail: string,
+  recipientName: string,
+  senderName: string
+): Promise<boolean> {
+  const subject = `${senderName} sent you a friend request - Denotes`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">👋 New Friend Request</h1>
+      </div>
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
+        <p style="font-size: 16px; margin-bottom: 20px;">Hi ${recipientName},</p>
+        <p style="font-size: 16px; margin-bottom: 20px;">
+          <strong>${senderName}</strong> wants to connect with you on Denotes!
+        </p>
+        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+          Once you accept, you'll be able to share topics and assign tasks to each other.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/friends" 
+             style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    font-weight: bold; 
+                    display: inline-block;">
+            View Friend Request
+          </a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center;">
+          This is an automated notification from Denotes.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({ to: recipientEmail, subject, html });
+}
+
+// Send notification when task is assigned
+export async function sendTaskAssignedEmail(
+  recipientEmail: string,
+  recipientName: string,
+  assignerName: string,
+  taskTitle: string,
+  taskDescription?: string
+): Promise<boolean> {
+  const subject = `${assignerName} assigned you a task - Denotes`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">✅ New Task Assigned</h1>
+      </div>
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
+        <p style="font-size: 16px; margin-bottom: 20px;">Hi ${recipientName},</p>
+        <p style="font-size: 16px; margin-bottom: 20px;">
+          <strong>${assignerName}</strong> has assigned you a new task:
+        </p>
+        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="margin: 0 0 10px 0; color: #333;">${taskTitle}</h3>
+          ${taskDescription ? `<p style="margin: 0; color: #666; font-size: 14px;">${taskDescription}</p>` : ""}
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/crud" 
+             style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    font-weight: bold; 
+                    display: inline-block;">
+            View Tasks
+          </a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center;">
+          This is an automated notification from Denotes.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({ to: recipientEmail, subject, html });
+}
+
