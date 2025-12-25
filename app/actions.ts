@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
-import { sendPasswordResetEmail, sendTopicSharedEmail, sendFriendRequestEmail, sendTaskAssignedEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendTopicSharedEmail, sendFriendRequestEmail, sendTaskAssignedEmail, sendVerificationEmail } from "@/lib/email";
 
 // Helper function to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -84,24 +84,117 @@ export async function registerUser(formData: FormData) {
     // Check if user already exists
     const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
+      // If user exists but is not verified, allow resending verification
+      if (!existingUser.emailVerified) {
+        // Generate new verification token
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        
+        await usersCollection.updateOne(
+          { _id: existingUser._id },
+          {
+            $set: {
+              verificationToken,
+              verificationTokenExpiry,
+            },
+          }
+        );
+        
+        // Send verification email
+        await sendVerificationEmail(
+          email,
+          existingUser.name || email,
+          verificationToken
+        );
+        
+        return { 
+          success: true, 
+          needsVerification: true,
+          message: "A new verification email has been sent. Please check your inbox." 
+        };
+      }
       return { success: false, error: "User already exists" };
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     const newUser = {
       email: email.trim(),
       password: hashedPassword,
       name: name?.trim() || email.trim(),
+      emailVerified: false,
+      verificationToken,
+      verificationTokenExpiry,
       createdAt: new Date(),
     };
 
     await usersCollection.insertOne(newUser);
-    return { success: true };
+    
+    // Send verification email
+    await sendVerificationEmail(
+      email,
+      name?.trim() || email.trim(),
+      verificationToken
+    );
+    
+    return { 
+      success: true, 
+      needsVerification: true,
+      message: "Please check your email to verify your account before logging in." 
+    };
   } catch (error) {
     console.error("Error registering user:", error);
     return { success: false, error: "Failed to register user" };
+  }
+}
+
+// Resend verification email
+export async function resendVerificationEmail(email: string) {
+  try {
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const user = await usersCollection.findOne({ email: email.trim() });
+    
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+    
+    if (user.emailVerified) {
+      return { success: false, error: "Email is already verified" };
+    }
+    
+    // Generate new verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    await usersCollection.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          verificationToken,
+          verificationTokenExpiry,
+        },
+      }
+    );
+    
+    // Send verification email
+    await sendVerificationEmail(
+      email,
+      user.name || email,
+      verificationToken
+    );
+    
+    return { success: true, message: "Verification email sent successfully" };
+  } catch (error) {
+    console.error("Error resending verification email:", error);
+    return { success: false, error: "Failed to send verification email" };
   }
 }
 

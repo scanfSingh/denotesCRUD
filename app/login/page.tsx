@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { registerUser } from "../actions";
+import { registerUser, resendVerificationEmail } from "../actions";
 import Navigation from "../components/Navigation";
 
 interface ValidationErrors {
@@ -25,7 +25,29 @@ export default function LoginPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handle URL parameters for verification status
+  useEffect(() => {
+    const verified = searchParams.get("verified");
+    const error = searchParams.get("error");
+
+    if (verified === "true") {
+      setSuccess("Email verified successfully! You can now log in.");
+    } else if (error === "missing-token") {
+      setError("Verification link is invalid. Please try again.");
+    } else if (error === "invalid-token") {
+      setError("Verification link is invalid or has already been used.");
+    } else if (error === "token-expired") {
+      setError("Verification link has expired. Please request a new one.");
+      setShowResendVerification(true);
+    } else if (error === "verification-failed") {
+      setError("Verification failed. Please try again.");
+    }
+  }, [searchParams]);
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -95,7 +117,12 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        if (result.error.includes("EMAIL_NOT_VERIFIED")) {
+          setError("Please verify your email before logging in. Check your inbox for the verification link.");
+          setShowResendVerification(true);
+        } else {
+          setError("Invalid email or password");
+        }
         setLoading(false);
       } else {
         router.push("/crud");
@@ -111,7 +138,11 @@ export default function LoginPage() {
       const result = await registerUser(formDataObj);
       if (result.success) {
         setError(null);
-        setSuccess("Registration successful! Please login with your credentials.");
+        if (result.needsVerification) {
+          setSuccess(result.message || "Please check your email to verify your account before logging in.");
+        } else {
+          setSuccess("Registration successful! Please login with your credentials.");
+        }
         setIsLogin(true);
         setFormData({ email: formData.email, password: "", name: "" });
         setValidationErrors({});
@@ -172,15 +203,40 @@ export default function LoginPage() {
 
           {/* Error Toast */}
           {error && (
-            <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4 flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="text-sm font-medium text-red-800 dark:text-red-200">
+                  {error}
+                </div>
               </div>
-              <div className="text-sm font-medium text-red-800 dark:text-red-200">
-                {error}
-              </div>
+              {showResendVerification && formData.email && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setResendLoading(true);
+                      const result = await resendVerificationEmail(formData.email);
+                      setResendLoading(false);
+                      if (result.success) {
+                        setError(null);
+                        setShowResendVerification(false);
+                        setSuccess("Verification email sent! Please check your inbox.");
+                      } else {
+                        setError(result.error || "Failed to send verification email");
+                      }
+                    }}
+                    disabled={resendLoading}
+                    className="text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 underline underline-offset-2 disabled:opacity-50"
+                  >
+                    {resendLoading ? "Sending..." : "Resend verification email"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

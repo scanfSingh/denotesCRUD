@@ -272,3 +272,71 @@ export async function sendTaskAssignedEmail(
   return await sendEmail({ to: recipientEmail, subject, html });
 }
 
+// Send email verification link
+export async function sendVerificationEmail(
+  email: string,
+  name: string,
+  verificationToken: string
+): Promise<boolean> {
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
+  
+  const subject = "Verify your email - Denotes";
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Email Verification</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">📧 Verify Your Email</h1>
+      </div>
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
+        <p style="font-size: 16px; margin-bottom: 20px;">Hi ${name || "there"},</p>
+        <p style="font-size: 16px; margin-bottom: 20px;">
+          Welcome to <strong>Denotes</strong>! Please verify your email address to complete your registration.
+        </p>
+        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+          Click the button below to verify your email:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" 
+             style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    font-weight: bold; 
+                    display: inline-block;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            Verify Email Address
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #666; margin-top: 30px;">
+          Or copy and paste this link into your browser:
+        </p>
+        <p style="font-size: 12px; color: #999; word-break: break-all; background: #fff; padding: 10px; border-radius: 5px; border: 1px solid #e0e0e0;">
+          ${verificationUrl}
+        </p>
+        <p style="font-size: 14px; color: #666; margin-top: 30px;">
+          <strong>This link will expire in 24 hours.</strong>
+        </p>
+        <p style="font-size: 14px; color: #666; margin-top: 20px;">
+          If you didn't create an account on Denotes, please ignore this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center; margin: 0;">
+          This is an automated message, please do not reply to this email.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({ to: email, subject, html });
+}
+

@@ -40,6 +40,11 @@ export const authOptions = {
             return null;
           }
 
+          // Check if email is verified
+          if (!user.emailVerified) {
+            throw new Error("EMAIL_NOT_VERIFIED");
+          }
+
           const isPasswordValid = await bcrypt.compare(
             credentials.password as string,
             user.password as string
@@ -54,7 +59,10 @@ export const authOptions = {
             email: user.email,
             name: user.name || user.email,
           };
-        } catch (error) {
+        } catch (error: any) {
+          if (error.message === "EMAIL_NOT_VERIFIED") {
+            throw error;
+          }
           console.error("Auth error:", error);
           return null;
         }
