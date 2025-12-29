@@ -75,44 +75,20 @@ export default function AudioNotesPage() {
     }
   };
 
-  const handleRecordingComplete = async (audioBlob: Blob) => {
+  const handleTranscriptionComplete = async (transcription: string) => {
     setProcessing(true);
     setError(null);
     setSuccess(null);
 
-    // Validate audio blob
-    if (!audioBlob || audioBlob.size === 0) {
-      setError("No audio data recorded. Please try again.");
-      setProcessing(false);
-      return;
-    }
-
-    // Check file size (OpenAI has a 25MB limit)
-    const maxSize = 25 * 1024 * 1024; // 25MB
-    if (audioBlob.size > maxSize) {
-      setError("Audio file is too large. Maximum size is 25MB. Please record a shorter audio.");
+    // Validate transcription
+    if (!transcription || transcription.trim().length === 0) {
+      setError("No speech detected. Please try again and speak clearly.");
       setProcessing(false);
       return;
     }
 
     try {
-      // Step 1: Transcribe audio
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.webm");
-
-      const transcribeResponse = await fetch("/api/audio/transcribe", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!transcribeResponse.ok) {
-        const errorData = await transcribeResponse.json();
-        throw new Error(errorData.error || "Failed to transcribe audio");
-      }
-
-      const { transcription } = await transcribeResponse.json();
-
-      // Step 2: Process with AI
+      // Process transcription with AI to generate structured note
       const processResponse = await fetch("/api/audio/process", {
         method: "POST",
         headers: {
@@ -125,17 +101,17 @@ export default function AudioNotesPage() {
 
       if (!processResponse.ok) {
         const errorData = await processResponse.json();
-        throw new Error(errorData.error || "Failed to process audio");
+        throw new Error(errorData.error || "Failed to process transcription");
       }
 
       const { note: processedNote } = await processResponse.json();
 
-      // Step 3: Save note to database
+      // Save note to database
       const noteFormData = new FormData();
       noteFormData.append("title", processedNote.title);
       noteFormData.append("content", processedNote.content);
       noteFormData.append("summary", processedNote.summary || "");
-      noteFormData.append("transcription", processedNote.transcription);
+      noteFormData.append("transcription", transcription);
       if (processedNote.topicId) {
         noteFormData.append("topicId", processedNote.topicId);
       }
@@ -143,7 +119,7 @@ export default function AudioNotesPage() {
       const result = await createNote(noteFormData);
 
       if (result.success) {
-        setSuccess("Note created successfully from audio!");
+        setSuccess("Note created successfully from speech!");
         await loadNotes();
         // Pre-fill form with the created note for editing
         setFormData({
@@ -156,8 +132,8 @@ export default function AudioNotesPage() {
         setError(result.error || "Failed to save note");
       }
     } catch (err: any) {
-      console.error("Error processing audio:", err);
-      setError(err.message || "Failed to process audio recording");
+      console.error("Error processing transcription:", err);
+      setError(err.message || "Failed to process speech recording");
     } finally {
       setProcessing(false);
     }
@@ -251,7 +227,7 @@ export default function AudioNotesPage() {
               Audio Notes
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Record audio and let AI create structured notes for you
+              Speak and let AI create structured notes for you (using browser speech recognition)
             </p>
           </div>
 
@@ -272,7 +248,7 @@ export default function AudioNotesPage() {
             <div className="mb-6 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-700"></div>
-                <span>Processing audio... This may take a moment.</span>
+                <span>Processing your speech... Creating structured note.</span>
               </div>
             </div>
           )}
@@ -298,7 +274,7 @@ export default function AudioNotesPage() {
                   )}
                 </div>
                 <AudioRecorder
-                  onRecordingComplete={handleRecordingComplete}
+                  onTranscriptionComplete={handleTranscriptionComplete}
                   onError={(err) => setError(err)}
                 />
               </div>
