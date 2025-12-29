@@ -88,52 +88,38 @@ export default function AudioNotesPage() {
     }
 
     try {
-      // Process transcription with AI to generate structured note
-      const processResponse = await fetch("/api/audio/process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          transcription,
-        }),
-      });
+      // Create a simple title from the first few words
+      const words = transcription.trim().split(/\s+/);
+      const titleWords = words.slice(0, 6).join(" ");
+      const title = titleWords.length > 50 
+        ? titleWords.substring(0, 47) + "..." 
+        : titleWords + (words.length > 6 ? "..." : "");
 
-      if (!processResponse.ok) {
-        const errorData = await processResponse.json();
-        throw new Error(errorData.error || "Failed to process transcription");
-      }
-
-      const { note: processedNote } = await processResponse.json();
-
-      // Save note to database
+      // Save note directly to database
       const noteFormData = new FormData();
-      noteFormData.append("title", processedNote.title);
-      noteFormData.append("content", processedNote.content);
-      noteFormData.append("summary", processedNote.summary || "");
+      noteFormData.append("title", title || "Voice Note");
+      noteFormData.append("content", transcription);
+      noteFormData.append("summary", "");
       noteFormData.append("transcription", transcription);
-      if (processedNote.topicId) {
-        noteFormData.append("topicId", processedNote.topicId);
-      }
 
       const result = await createNote(noteFormData);
 
       if (result.success) {
-        setSuccess("Note created successfully from speech!");
+        setSuccess("Note saved successfully!");
         await loadNotes();
         // Pre-fill form with the created note for editing
         setFormData({
-          title: processedNote.title,
-          content: processedNote.content,
-          summary: processedNote.summary || "",
-          topicId: processedNote.topicId || "",
+          title: title || "Voice Note",
+          content: transcription,
+          summary: "",
+          topicId: "",
         });
       } else {
         setError(result.error || "Failed to save note");
       }
     } catch (err: any) {
-      console.error("Error processing transcription:", err);
-      setError(err.message || "Failed to process speech recording");
+      console.error("Error saving transcription:", err);
+      setError(err.message || "Failed to save note");
     } finally {
       setProcessing(false);
     }
@@ -227,7 +213,7 @@ export default function AudioNotesPage() {
               Audio Notes
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Speak and let AI create structured notes for you (using browser speech recognition)
+              Speak and save your voice notes instantly
             </p>
           </div>
 
@@ -248,7 +234,7 @@ export default function AudioNotesPage() {
             <div className="mb-6 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-700"></div>
-                <span>Processing your speech... Creating structured note.</span>
+                <span>Saving your note...</span>
               </div>
             </div>
           )}
