@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import { featureFlags } from "@/lib/featureFlags";
 
 export default function Navigation() {
   const { data: session, status } = useSession();
@@ -18,14 +19,37 @@ export default function Navigation() {
 
   const isActive = (path: string) => pathname === path;
 
-  const navLinks = [
-    { href: "/", label: "Home", icon: "🏠" },
-    { href: "/crud", label: "Tasks", icon: "✓" },
-    { href: "/topics", label: "Topics", icon: "📝" },
-    { href: "/topics-view", label: "View", icon: "👁️" },
-    { href: "/shared-topics", label: "Shared", icon: "🔗" },
-    { href: "/audio-notes", label: "Audio Notes", icon: "🎤" },
-  ];
+  // Feature flags for navigation
+  const navFlags = featureFlags.navigation;
+  const showDarkMode = featureFlags.ui.darkMode;
+  const showFriends = featureFlags.social.friends && navFlags.friends;
+  const showProfile = navFlags.profile;
+
+  // Build nav links based on feature flags
+  const navLinks = useMemo(() => {
+    const links: { href: string; label: string; icon: string }[] = [];
+    
+    if (navFlags.home) {
+      links.push({ href: "/", label: "Home", icon: "🏠" });
+    }
+    if (navFlags.tasks) {
+      links.push({ href: "/crud", label: "Tasks", icon: "✓" });
+    }
+    if (navFlags.topics && featureFlags.topics.enabled) {
+      links.push({ href: "/topics", label: "Topics", icon: "📝" });
+    }
+    if (navFlags.topicsView && featureFlags.topics.viewPage) {
+      links.push({ href: "/topics-view", label: "View", icon: "👁️" });
+    }
+    if (navFlags.sharedTopics && featureFlags.social.sharedTopics) {
+      links.push({ href: "/shared-topics", label: "Shared", icon: "🔗" });
+    }
+    if (navFlags.audioNotes && featureFlags.audioNotes.enabled) {
+      links.push({ href: "/audio-notes", label: "Audio Notes", icon: "🎤" });
+    }
+    
+    return links;
+  }, [navFlags]);
 
   const handleLogout = async () => {
     setMobileMenuOpen(false);
@@ -117,12 +141,13 @@ export default function Navigation() {
             })}
 
             {/* Theme Toggle */}
-            <ThemeToggle />
+            {showDarkMode && <ThemeToggle />}
 
             {/* Auth Links */}
             {status === "authenticated" ? (
               <div className="flex items-center gap-1 ml-2">
                 {/* Profile with Hover Card */}
+                {showProfile && (
                 <div
                   ref={profileRef}
                   className="relative"
@@ -188,6 +213,7 @@ export default function Navigation() {
                           </svg>
                           <span>View Profile</span>
                         </Link>
+                        {showFriends && (
                         <Link
                           href="/friends"
                           className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -201,6 +227,7 @@ export default function Navigation() {
                           </svg>
                           <span>Friends</span>
                         </Link>
+                        )}
                         <Link
                           href="/profile"
                           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 mono:text-black hover:bg-gray-100 dark:hover:bg-gray-700 mono:hover:bg-gray-200 transition-colors"
@@ -222,8 +249,9 @@ export default function Navigation() {
                         </button>
                       </div>
                     </div>
-                  )}
+                    )}
                 </div>
+                )}
               </div>
             ) : (
               <Link
@@ -241,7 +269,7 @@ export default function Navigation() {
 
           {/* Mobile Menu Button & Theme Toggle */}
           <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
+            {showDarkMode && <ThemeToggle />}
             <button
               ref={menuButtonRef}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -312,6 +340,7 @@ export default function Navigation() {
             {/* Auth Links */}
             {status === "authenticated" ? (
               <>
+                {showProfile && (
                 <Link
                   href="/profile"
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
@@ -323,6 +352,8 @@ export default function Navigation() {
                   <span className="text-lg">👤</span>
                   <span>Profile</span>
                 </Link>
+                )}
+                {showFriends && (
                 <Link
                   href="/friends"
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
@@ -334,6 +365,7 @@ export default function Navigation() {
                   <span className="text-lg">👥</span>
                   <span>Friends</span>
                 </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 mono:text-black hover:bg-gray-100 dark:hover:bg-gray-800 mono:hover:bg-gray-200 transition-all duration-200"

@@ -57,11 +57,13 @@ declare global {
 interface AudioRecorderProps {
   onTranscriptionComplete: (transcription: string) => void;
   onError?: (error: string) => void;
+  showLivePreview?: boolean;
 }
 
 export default function AudioRecorder({
   onTranscriptionComplete,
   onError,
+  showLivePreview = true,
 }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -287,7 +289,7 @@ export default function AudioRecorder({
         </p>
 
         {/* Live Transcription Preview */}
-        {isRecording && currentTranscript && (
+        {showLivePreview && isRecording && currentTranscript && (
           <div className="w-full mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Live transcription:</p>
             <p className="text-sm text-gray-800 dark:text-gray-200">

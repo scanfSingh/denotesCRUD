@@ -13,6 +13,7 @@ import {
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 import AudioRecorder from "../components/AudioRecorder";
+import { featureFlags } from "@/lib/featureFlags";
 
 export default function AudioNotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -31,13 +32,26 @@ export default function AudioNotesPage() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [apiStatus, setApiStatus] = useState<"checking" | "ready" | "not_ready">("checking");
 
+  // Feature flags
+  const showApiStatus = featureFlags.ui.apiStatusIndicator;
+  const enableTopicLinking = featureFlags.audioNotes.topicLinking;
+  const enableAiProcessing = featureFlags.audioNotes.aiProcessing;
+  const enableSummaries = featureFlags.notes.summaries;
+  const showLivePreview = featureFlags.audioNotes.liveTranscriptionPreview;
+
   useEffect(() => {
     loadNotes();
-    loadTopics();
-    checkApiStatus();
+    if (enableTopicLinking) {
+      loadTopics();
+    }
+    if (showApiStatus) {
+      checkApiStatus();
+    }
   }, []);
 
   const checkApiStatus = async () => {
+    if (!showApiStatus) return;
+    
     try {
       const response = await fetch("/api/audio/test");
       const data = await response.json();
@@ -88,18 +102,47 @@ export default function AudioNotesPage() {
     }
 
     try {
-      // Create a simple title from the first few words
-      const words = transcription.trim().split(/\s+/);
-      const titleWords = words.slice(0, 6).join(" ");
-      const title = titleWords.length > 50 
-        ? titleWords.substring(0, 47) + "..." 
-        : titleWords + (words.length > 6 ? "..." : "");
+      let noteTitle: string;
+      let noteContent: string;
+      let noteSummary = "";
 
-      // Save note directly to database
+      if (enableAiProcessing) {
+        // Process with AI
+        const processResponse = await fetch("/api/audio/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcription }),
+        });
+
+        if (processResponse.ok) {
+          const { note: processedNote } = await processResponse.json();
+          noteTitle = processedNote.title || "Voice Note";
+          noteContent = processedNote.content || transcription;
+          noteSummary = processedNote.summary || "";
+        } else {
+          // Fallback to basic note if AI fails
+          const words = transcription.trim().split(/\s+/);
+          const titleWords = words.slice(0, 6).join(" ");
+          noteTitle = titleWords.length > 50 
+            ? titleWords.substring(0, 47) + "..." 
+            : titleWords + (words.length > 6 ? "..." : "");
+          noteContent = transcription;
+        }
+      } else {
+        // Create a simple title from the first few words (no AI)
+        const words = transcription.trim().split(/\s+/);
+        const titleWords = words.slice(0, 6).join(" ");
+        noteTitle = titleWords.length > 50 
+          ? titleWords.substring(0, 47) + "..." 
+          : titleWords + (words.length > 6 ? "..." : "");
+        noteContent = transcription;
+      }
+
+      // Save note to database
       const noteFormData = new FormData();
-      noteFormData.append("title", title || "Voice Note");
-      noteFormData.append("content", transcription);
-      noteFormData.append("summary", "");
+      noteFormData.append("title", noteTitle || "Voice Note");
+      noteFormData.append("content", noteContent);
+      noteFormData.append("summary", noteSummary);
       noteFormData.append("transcription", transcription);
 
       const result = await createNote(noteFormData);
@@ -109,9 +152,9 @@ export default function AudioNotesPage() {
         await loadNotes();
         // Pre-fill form with the created note for editing
         setFormData({
-          title: title || "Voice Note",
-          content: transcription,
-          summary: "",
+          title: noteTitle || "Voice Note",
+          content: noteContent,
+          summary: noteSummary,
           topicId: "",
         });
       } else {
@@ -248,12 +291,12 @@ export default function AudioNotesPage() {
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Record Audio
                   </h2>
-                  {apiStatus === "ready" && (
+                  {showApiStatus && apiStatus === "ready" && (
                     <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-medium rounded">
                       ✓ Ready
                     </span>
                   )}
-                  {apiStatus === "not_ready" && (
+                  {showApiStatus && apiStatus === "not_ready" && (
                     <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-medium rounded">
                       ⚠ Check Config
                     </span>
@@ -262,6 +305,7 @@ export default function AudioNotesPage() {
                 <AudioRecorder
                   onTranscriptionComplete={handleTranscriptionComplete}
                   onError={(err) => setError(err)}
+                  showLivePreview={showLivePreview}
                 />
               </div>
 
@@ -308,46 +352,50 @@ export default function AudioNotesPage() {
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </div>
-                      <div>
-                        <label
-                          htmlFor="summary"
-                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                        >
-                          Summary
-                        </label>
-                        <textarea
-                          id="summary"
-                          value={formData.summary}
-                          onChange={(e) =>
-                            setFormData({ ...formData, summary: e.target.value })
-                          }
-                          rows={3}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="topicId"
-                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                        >
-                          Link to Topic (Optional)
-                        </label>
-                        <select
-                          id="topicId"
-                          value={formData.topicId}
-                          onChange={(e) =>
-                            setFormData({ ...formData, topicId: e.target.value })
-                          }
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          <option value="">None</option>
-                          {topics.map((topic) => (
-                            <option key={topic._id} value={topic._id}>
-                              {topic.title}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {enableSummaries && (
+                        <div>
+                          <label
+                            htmlFor="summary"
+                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                          >
+                            Summary
+                          </label>
+                          <textarea
+                            id="summary"
+                            value={formData.summary}
+                            onChange={(e) =>
+                              setFormData({ ...formData, summary: e.target.value })
+                            }
+                            rows={3}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </div>
+                      )}
+                      {enableTopicLinking && (
+                        <div>
+                          <label
+                            htmlFor="topicId"
+                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                          >
+                            Link to Topic (Optional)
+                          </label>
+                          <select
+                            id="topicId"
+                            value={formData.topicId}
+                            onChange={(e) =>
+                              setFormData({ ...formData, topicId: e.target.value })
+                            }
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                            <option value="">None</option>
+                            {topics.map((topic) => (
+                              <option key={topic._id} value={topic._id}>
+                                {topic.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="flex gap-4">
                         <button
                           type="submit"
@@ -374,7 +422,7 @@ export default function AudioNotesPage() {
                           {selectedNote?.title}
                         </p>
                       </div>
-                      {selectedNote?.summary && (
+                      {enableSummaries && selectedNote?.summary && (
                         <div>
                           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Summary
@@ -392,7 +440,7 @@ export default function AudioNotesPage() {
                           {selectedNote?.content}
                         </p>
                       </div>
-                      {selectedNote?.topicId && (
+                      {enableTopicLinking && selectedNote?.topicId && (
                         <div>
                           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Linked Topic
@@ -463,7 +511,7 @@ export default function AudioNotesPage() {
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                               {note.title}
                             </h3>
-                            {note.summary && (
+                            {enableSummaries && note.summary && (
                               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                 {note.summary}
                               </p>
@@ -472,7 +520,7 @@ export default function AudioNotesPage() {
                               {note.content}
                             </p>
                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                              {note.topicId && (
+                              {enableTopicLinking && note.topicId && (
                                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
                                   {getTopicName(note.topicId) || "Topic"}
                                 </span>
