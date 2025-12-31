@@ -117,12 +117,7 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        if (result.error.includes("EMAIL_NOT_VERIFIED")) {
-          setError("Please verify your email before logging in. Check your inbox for the verification link.");
-          setShowResendVerification(true);
-        } else {
-          setError("Invalid email or password");
-        }
+        setError("Invalid email or password");
         setLoading(false);
       } else {
         router.push("/crud");

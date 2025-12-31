@@ -40,11 +40,6 @@ export const authOptions = {
             return null;
           }
 
-          // Check if email is verified
-          if (!user.emailVerified) {
-            throw new Error("EMAIL_NOT_VERIFIED");
-          }
-
           const isPasswordValid = await bcrypt.compare(
             credentials.password as string,
             user.password as string
@@ -58,11 +53,9 @@ export const authOptions = {
             id: user._id.toString(),
             email: user.email,
             name: user.name || user.email,
+            emailVerified: user.emailVerified || false,
           };
-        } catch (error: any) {
-          if (error.message === "EMAIL_NOT_VERIFIED") {
-            throw error;
-          }
+        } catch (error) {
           console.error("Auth error:", error);
           return null;
         }
@@ -126,9 +119,12 @@ export const authOptions = {
     async jwt({ token, user, account }: any) {
       if (user) {
         token.id = user.id;
+        token.emailVerified = user.emailVerified;
       }
       if (account?.provider === "google") {
         token.provider = "google";
+        // Google OAuth users are considered verified since Google verifies emails
+        token.emailVerified = true;
       }
       return token;
     },
@@ -136,6 +132,7 @@ export const authOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.provider = token.provider;
+        session.user.emailVerified = token.emailVerified ?? true;
       }
       return session;
     },
