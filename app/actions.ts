@@ -1938,6 +1938,212 @@ export async function searchUsers(query: string): Promise<User[]> {
   }
 }
 
+// ========== ADMIN OPERATIONS ==========
+
+// Admin emails - users with these emails have admin access
+const ADMIN_EMAILS = [
+  process.env.ADMIN_EMAIL || "admin@example.com",
+];
+
+// Check if current user is an admin
+export async function isCurrentUserAdmin(): Promise<boolean> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return false;
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    if (!user) {
+      return false;
+    }
+
+    // Check if user is admin by email or isAdmin flag
+    return ADMIN_EMAILS.includes(user.email) || user.isAdmin === true;
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false;
+  }
+}
+
+// Admin user interface with more details
+export interface AdminUser {
+  _id: string;
+  email: string;
+  name: string;
+  provider?: string;
+  emailVerified?: boolean;
+  createdAt?: Date;
+  lastLoginAt?: Date;
+  isAdmin?: boolean;
+  topicsCount?: number;
+  notesCount?: number;
+  tasksCount?: number;
+}
+
+// Get all users for admin (with stats)
+export async function getAllUsersForAdmin(): Promise<AdminUser[]> {
+  try {
+    const isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      console.log("User is not an admin, returning empty array");
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+    const topicsCollection = db.collection("topics");
+    const notesCollection = db.collection("notes");
+    const tasksCollection = db.collection("tasks");
+
+    const users = await usersCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Get counts for each user
+    const usersWithStats = await Promise.all(
+      users.map(async (user) => {
+        const [topicsCount, notesCount, tasksCount] = await Promise.all([
+          topicsCollection.countDocuments({ userId: user._id }),
+          notesCollection.countDocuments({ userId: user._id }),
+          tasksCollection.countDocuments({
+            $or: [
+              { userId: user._id },
+              { createdBy: user._id },
+            ],
+          }),
+        ]);
+
+        return {
+          _id: user._id.toString(),
+          email: user.email,
+          name: user.name || user.email,
+          provider: user.provider,
+          emailVerified: user.emailVerified,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt,
+          isAdmin: ADMIN_EMAILS.includes(user.email) || user.isAdmin === true,
+          topicsCount,
+          notesCount,
+          tasksCount,
+        };
+      })
+    );
+
+    return usersWithStats;
+  } catch (error) {
+    console.error("Error fetching users for admin:", error);
+    return [];
+  }
+}
+
+// Get admin dashboard stats
+export async function getAdminStats(): Promise<{
+  totalUsers: number;
+  verifiedUsers: number;
+  totalTopics: number;
+  totalNotes: number;
+  totalTasks: number;
+  recentUsers: AdminUser[];
+}> {
+  try {
+    const isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      return {
+        totalUsers: 0,
+        verifiedUsers: 0,
+        totalTopics: 0,
+        totalNotes: 0,
+        totalTasks: 0,
+        recentUsers: [],
+      };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+    const topicsCollection = db.collection("topics");
+    const notesCollection = db.collection("notes");
+    const tasksCollection = db.collection("tasks");
+
+    const [totalUsers, verifiedUsers, totalTopics, totalNotes, totalTasks, recentUsersData] = await Promise.all([
+      usersCollection.countDocuments({}),
+      usersCollection.countDocuments({ emailVerified: true }),
+      topicsCollection.countDocuments({}),
+      notesCollection.countDocuments({}),
+      tasksCollection.countDocuments({}),
+      usersCollection.find({}).sort({ createdAt: -1 }).limit(5).toArray(),
+    ]);
+
+    const recentUsers: AdminUser[] = recentUsersData.map((user) => ({
+      _id: user._id.toString(),
+      email: user.email,
+      name: user.name || user.email,
+      provider: user.provider,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      isAdmin: ADMIN_EMAILS.includes(user.email) || user.isAdmin === true,
+    }));
+
+    return {
+      totalUsers,
+      verifiedUsers,
+      totalTopics,
+      totalNotes,
+      totalTasks,
+      recentUsers,
+    };
+  } catch (error) {
+    console.error("Error fetching admin stats:", error);
+    return {
+      totalUsers: 0,
+      verifiedUsers: 0,
+      totalTopics: 0,
+      totalNotes: 0,
+      totalTasks: 0,
+      recentUsers: [],
+    };
+  }
+}
+
+// Toggle user admin status
+export async function toggleUserAdmin(targetUserId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const usersCollection = db.collection("users");
+
+    const targetUser = await usersCollection.findOne({ _id: new ObjectId(targetUserId) });
+    if (!targetUser) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Toggle the isAdmin flag
+    const newAdminStatus = !targetUser.isAdmin;
+    await usersCollection.updateOne(
+      { _id: new ObjectId(targetUserId) },
+      { $set: { isAdmin: newAdminStatus, updatedAt: new Date() } }
+    );
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling user admin status:", error);
+    return { success: false, error: "Failed to update admin status" };
+  }
+}
+
 // ========== PASSWORD RESET OPERATIONS ==========
 
 // REQUEST PASSWORD RESET - Generate a reset token for a user

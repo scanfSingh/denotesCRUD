@@ -6,18 +6,27 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import { featureFlags } from "@/lib/featureFlags";
+import { isCurrentUserAdmin } from "../actions";
 
 export default function Navigation() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileHover, setProfileHover] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isActive = (path: string) => pathname === path;
+
+  // Check if user is admin
+  useEffect(() => {
+    if (status === "authenticated") {
+      isCurrentUserAdmin().then(setIsAdmin);
+    }
+  }, [status]);
 
   // Feature flags for navigation
   const navFlags = featureFlags.navigation;
@@ -238,6 +247,21 @@ export default function Navigation() {
                           </svg>
                           <span>Account Settings</span>
                         </Link>
+                        {isAdmin && (
+                          <Link
+                            href="/admin"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive("/admin")
+                                ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                                : "text-gray-700 dark:text-gray-300 mono:text-black hover:bg-gray-100 dark:hover:bg-gray-700 mono:hover:bg-gray-200"
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span>Admin Panel</span>
+                          </Link>
+                        )}
                         <button
                           onClick={handleLogout}
                           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 dark:text-red-400 mono:text-black hover:bg-red-50 dark:hover:bg-red-900/20 mono:hover:bg-gray-200 transition-colors"
@@ -364,6 +388,19 @@ export default function Navigation() {
                 >
                   <span className="text-lg">👥</span>
                   <span>Friends</span>
+                </Link>
+                )}
+                {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActive("/admin")
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+                      : "text-gray-700 dark:text-gray-300 mono:text-black hover:bg-gray-100 dark:hover:bg-gray-800 mono:hover:bg-gray-200"
+                  }`}
+                >
+                  <span className="text-lg">🛡️</span>
+                  <span>Admin</span>
                 </Link>
                 )}
                 <button
