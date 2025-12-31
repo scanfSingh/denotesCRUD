@@ -2166,7 +2166,7 @@ export async function requestPasswordReset(email: string) {
     // Always return success to prevent email enumeration
     // In production, you would send an email here
     if (!user) {
-      return { success: true, message: "If an account exists with this email, a password reset link has been sent." };
+      return { success: false, message: "If an account exists with this email, a password reset link has been sent." };
     }
 
     // Generate a secure random token
