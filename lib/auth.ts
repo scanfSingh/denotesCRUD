@@ -89,22 +89,33 @@ export const authOptions = {
               image: user.image,
               provider: "google",
               providerId: account.providerAccountId,
+              emailVerified: true,
+              emailVerifiedAt: new Date(),
               createdAt: new Date(),
             });
             user.id = result.insertedId.toString();
           } else {
             // Update existing user with Google info if needed
+            const updateFields: Record<string, any> = {
+              updatedAt: new Date(),
+            };
+            
             if (!existingUser.provider) {
+              updateFields.provider = "google";
+              updateFields.providerId = account.providerAccountId;
+              updateFields.image = user.image;
+            }
+            
+            // Mark as verified if not already (Google verifies emails)
+            if (!existingUser.emailVerified) {
+              updateFields.emailVerified = true;
+              updateFields.emailVerifiedAt = new Date();
+            }
+            
+            if (Object.keys(updateFields).length > 1) {
               await usersCollection.updateOne(
                 { _id: existingUser._id },
-                {
-                  $set: {
-                    provider: "google",
-                    providerId: account.providerAccountId,
-                    image: user.image,
-                    updatedAt: new Date(),
-                  },
-                }
+                { $set: updateFields }
               );
             }
             user.id = existingUser._id.toString();
