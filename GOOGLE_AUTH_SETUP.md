@@ -100,3 +100,4 @@ NEXTAUTH_SECRET=your-secret-key-here
 4. ✅ Submit app for Google verification (optional but recommended)
 5. ✅ Test the complete sign-in flow
 
+
