@@ -179,10 +179,10 @@ function BlogWriteForm() {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Content *
           </label>
-          <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
+          <div className="rounded-xl overflow-hidden">
             <RichTextEditor
-              value={formData.content}
-              onChange={(value) => setFormData({ ...formData, content: value })}
+              content={formData.content}
+              onChange={(html) => setFormData({ ...formData, content: html })}
               placeholder="Write your blog content here..."
             />
           </div>
