@@ -51,6 +51,22 @@ export interface Topic {
   updatedAt?: Date;
 }
 
+export interface BlogPost {
+  _id?: string;
+  title: string;
+  content: string;
+  excerpt?: string; // Short preview of the content
+  coverImage?: string; // URL for cover image
+  published: boolean;
+  authorId?: string;
+  authorName?: string;
+  authorEmail?: string;
+  tags?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+  publishedAt?: Date;
+}
+
 export async function testDatabaseConnection() {
   let isConnected = false;
   try {
@@ -2294,5 +2310,285 @@ export async function resetPassword(token: string, newPassword: string) {
   } catch (error) {
     console.error("Error resetting password:", error);
     return { success: false, error: "Failed to reset password" };
+  }
+}
+
+// ================== BLOG POSTS ==================
+
+// CREATE - Create a new blog post
+export async function createBlogPost(formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+    const usersCollection = db.collection("users");
+
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const excerpt = formData.get("excerpt") as string;
+    const coverImage = formData.get("coverImage") as string;
+    const tagsStr = formData.get("tags") as string;
+    const published = formData.get("published") === "true";
+
+    if (!title || title.trim() === "") {
+      return { success: false, error: "Title is required" };
+    }
+
+    if (!content || content.trim() === "") {
+      return { success: false, error: "Content is required" };
+    }
+
+    // Get author info
+    const author = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const authorName = author?.name || author?.email || "Unknown";
+    const authorEmail = author?.email || "";
+
+    // Parse tags
+    const tags = tagsStr ? tagsStr.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
+    // Generate excerpt if not provided
+    const autoExcerpt = excerpt?.trim() || content.replace(/<[^>]*>/g, "").slice(0, 200) + "...";
+
+    const newPost: any = {
+      title: title.trim(),
+      content: content.trim(),
+      excerpt: autoExcerpt,
+      coverImage: coverImage?.trim() || null,
+      published,
+      authorId: new ObjectId(userId),
+      authorName,
+      authorEmail,
+      tags,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (published) {
+      newPost.publishedAt = new Date();
+    }
+
+    const result = await blogsCollection.insertOne(newPost);
+
+    revalidatePath("/");
+    revalidatePath("/blog");
+    return { success: true, id: result.insertedId.toString() };
+  } catch (error) {
+    console.error("Error creating blog post:", error);
+    return { success: false, error: "Failed to create blog post" };
+  }
+}
+
+// READ - Get all published blog posts (for public display)
+export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
+  try {
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+
+    const posts = await blogsCollection
+      .find({ published: true })
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .toArray();
+
+    return posts.map((post) => ({
+      _id: post._id.toString(),
+      title: post.title,
+      content: post.content,
+      excerpt: post.excerpt,
+      coverImage: post.coverImage,
+      published: post.published,
+      authorId: post.authorId?.toString(),
+      authorName: post.authorName,
+      authorEmail: post.authorEmail,
+      tags: post.tags || [],
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      publishedAt: post.publishedAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching blog posts:", error);
+    return [];
+  }
+}
+
+// READ - Get user's blog posts (for management)
+export async function getUserBlogPosts(): Promise<BlogPost[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+
+    const posts = await blogsCollection
+      .find({ authorId: new ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return posts.map((post) => ({
+      _id: post._id.toString(),
+      title: post.title,
+      content: post.content,
+      excerpt: post.excerpt,
+      coverImage: post.coverImage,
+      published: post.published,
+      authorId: post.authorId?.toString(),
+      authorName: post.authorName,
+      authorEmail: post.authorEmail,
+      tags: post.tags || [],
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      publishedAt: post.publishedAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching user blog posts:", error);
+    return [];
+  }
+}
+
+// READ - Get single blog post by ID
+export async function getBlogPost(postId: string): Promise<BlogPost | null> {
+  try {
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+
+    const post = await blogsCollection.findOne({ _id: new ObjectId(postId) });
+
+    if (!post) {
+      return null;
+    }
+
+    return {
+      _id: post._id.toString(),
+      title: post.title,
+      content: post.content,
+      excerpt: post.excerpt,
+      coverImage: post.coverImage,
+      published: post.published,
+      authorId: post.authorId?.toString(),
+      authorName: post.authorName,
+      authorEmail: post.authorEmail,
+      tags: post.tags || [],
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      publishedAt: post.publishedAt,
+    };
+  } catch (error) {
+    console.error("Error fetching blog post:", error);
+    return null;
+  }
+}
+
+// UPDATE - Update a blog post
+export async function updateBlogPost(postId: string, formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+
+    // Check ownership
+    const existingPost = await blogsCollection.findOne({ _id: new ObjectId(postId) });
+    if (!existingPost) {
+      return { success: false, error: "Blog post not found" };
+    }
+
+    if (existingPost.authorId?.toString() !== userId) {
+      return { success: false, error: "You can only edit your own posts" };
+    }
+
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const excerpt = formData.get("excerpt") as string;
+    const coverImage = formData.get("coverImage") as string;
+    const tagsStr = formData.get("tags") as string;
+    const published = formData.get("published") === "true";
+
+    if (!title || title.trim() === "") {
+      return { success: false, error: "Title is required" };
+    }
+
+    if (!content || content.trim() === "") {
+      return { success: false, error: "Content is required" };
+    }
+
+    // Parse tags
+    const tags = tagsStr ? tagsStr.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
+    // Generate excerpt if not provided
+    const autoExcerpt = excerpt?.trim() || content.replace(/<[^>]*>/g, "").slice(0, 200) + "...";
+
+    const updateData: any = {
+      title: title.trim(),
+      content: content.trim(),
+      excerpt: autoExcerpt,
+      coverImage: coverImage?.trim() || null,
+      published,
+      tags,
+      updatedAt: new Date(),
+    };
+
+    // Set publishedAt if publishing for the first time
+    if (published && !existingPost.publishedAt) {
+      updateData.publishedAt = new Date();
+    }
+
+    await blogsCollection.updateOne(
+      { _id: new ObjectId(postId) },
+      { $set: updateData }
+    );
+
+    revalidatePath("/");
+    revalidatePath("/blog");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating blog post:", error);
+    return { success: false, error: "Failed to update blog post" };
+  }
+}
+
+// DELETE - Delete a blog post
+export async function deleteBlogPost(postId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+
+    // Check ownership
+    const existingPost = await blogsCollection.findOne({ _id: new ObjectId(postId) });
+    if (!existingPost) {
+      return { success: false, error: "Blog post not found" };
+    }
+
+    if (existingPost.authorId?.toString() !== userId) {
+      return { success: false, error: "You can only delete your own posts" };
+    }
+
+    await blogsCollection.deleteOne({ _id: new ObjectId(postId) });
+
+    revalidatePath("/");
+    revalidatePath("/blog");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting blog post:", error);
+    return { success: false, error: "Failed to delete blog post" };
   }
 }

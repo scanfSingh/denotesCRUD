@@ -48,6 +48,12 @@ export const featureFlags = {
     tasks: process.env.NEXT_PUBLIC_FF_TASKS !== "false",
   },
 
+  // Blog Features
+  blog: {
+    /** Enable/disable blog feature */
+    enabled: process.env.NEXT_PUBLIC_FF_BLOG !== "false",
+  },
+
   // Social Features
   social: {
     /** Enable friends feature */
@@ -97,6 +103,9 @@ export const featureFlags = {
     
     /** Show Audio Notes link */
     audioNotes: process.env.NEXT_PUBLIC_FF_NAV_AUDIO_NOTES !== "false",
+    
+    /** Show Blog link */
+    blog: process.env.NEXT_PUBLIC_FF_NAV_BLOG !== "false",
     
     /** Show Friends link */
     friends: process.env.NEXT_PUBLIC_FF_NAV_FRIENDS !== "false",

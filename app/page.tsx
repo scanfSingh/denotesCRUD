@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { testDatabaseConnection, getSharedTopics, type SharedTopic, type Topic } from "./actions";
+import { testDatabaseConnection, getSharedTopics, getPublishedBlogPosts, type SharedTopic, type Topic, type BlogPost } from "./actions";
 import Navigation from "./components/Navigation";
 
 export default function Home() {
@@ -14,6 +14,8 @@ export default function Home() {
   const [loadingShared, setLoadingShared] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [loadingBlogs, setLoadingBlogs] = useState(false);
 
   useEffect(() => {
     async function checkConnection() {
@@ -22,7 +24,20 @@ export default function Home() {
       setLoading(false);
     }
     checkConnection();
+    loadBlogPosts();
   }, []);
+
+  const loadBlogPosts = async () => {
+    setLoadingBlogs(true);
+    try {
+      const posts = await getPublishedBlogPosts();
+      setBlogPosts(posts);
+    } catch (err) {
+      console.error("Failed to load blog posts:", err);
+    } finally {
+      setLoadingBlogs(false);
+    }
+  };
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -609,6 +624,109 @@ export default function Home() {
           </div>
         )}
 
+        {/* Blog Section */}
+        {blogPosts.length > 0 && (
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center mb-12">
+              <p className="text-violet-400 font-medium tracking-wider uppercase text-sm mb-4">Latest Posts</p>
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                From Our Blog
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                Discover insights, tutorials, and stories from our community
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {blogPosts.slice(0, 6).map((post, index) => (
+                <article
+                  key={post._id}
+                  className="group relative bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-violet-500/50 transition-all duration-500"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  {/* Cover Image */}
+                  {post.coverImage ? (
+                    <div className="h-48 overflow-hidden">
+                      <img
+                        src={post.coverImage}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-48 bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 flex items-center justify-center">
+                      <svg className="w-16 h-16 text-violet-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {post.tags.slice(0, 2).map((tag, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 text-xs font-medium bg-violet-500/20 text-violet-300 rounded"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-violet-300 transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+
+                    {/* Excerpt */}
+                    <p className="text-gray-400 text-sm line-clamp-3 mb-4">
+                      {post.excerpt}
+                    </p>
+
+                    {/* Author & Date */}
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+                          <span className="text-xs font-bold text-white">
+                            {post.authorName?.charAt(0).toUpperCase() || "?"}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-400">{post.authorName}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {post.publishedAt && new Date(post.publishedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Hover gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-violet-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </article>
+              ))}
+            </div>
+
+            {blogPosts.length > 6 && (
+              <div className="text-center mt-10">
+                <Link
+                  href="/blog"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/50 text-white font-medium rounded-2xl transition-all duration-300"
+                >
+                  View All Posts
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
         <footer className="relative z-10 border-t border-white/10 mt-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -625,12 +743,14 @@ export default function Home() {
                   <>
                     <Link href="/crud" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Tasks</Link>
                     <Link href="/topics" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Topics</Link>
+                    <Link href="/blog" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Blog</Link>
                     <Link href="/friends" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Friends</Link>
                     <Link href="/shared-topics" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Shared</Link>
                   </>
                 ) : (
                   <>
                     <Link href="/login" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Sign In</Link>
+                    <Link href="/blog" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Blog</Link>
                     <Link href="/app-demo" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Demo</Link>
                   </>
                 )}
