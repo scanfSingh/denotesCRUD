@@ -86,14 +86,14 @@ export const metadata: Metadata = {
     creator: "@denotes", // Update with your Twitter handle
   },
 
-  // Icons
+  // Icons - Next.js automatically uses favicon.ico, icon.svg, and apple-icon.svg from app folder
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.ico", sizes: "48x48" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180" },
+      { url: "/apple-icon.svg", type: "image/svg+xml" },
     ],
     shortcut: "/favicon.ico",
   },
