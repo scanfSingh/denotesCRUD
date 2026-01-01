@@ -36,6 +36,7 @@ export interface Task {
   assignedToName?: string; // Name of the assigned user
   createdBy?: string; // User ID of the creator
   createdByName?: string; // Name of the creator
+  deadline?: Date; // Optional deadline for the task
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -368,6 +369,7 @@ export async function createTask(formData: FormData) {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const assignedToId = formData.get("assignedTo") as string;
+    const deadlineStr = formData.get("deadline") as string;
 
     if (!title || title.trim() === "") {
       return { success: false, error: "Title is required" };
@@ -401,6 +403,12 @@ export async function createTask(formData: FormData) {
       }
     }
 
+    // Parse deadline if provided
+    let deadline: Date | undefined;
+    if (deadlineStr && deadlineStr.trim() !== "") {
+      deadline = new Date(deadlineStr);
+    }
+
     const newTask: any = {
       title: title.trim(),
       description: description?.trim() || "",
@@ -415,6 +423,10 @@ export async function createTask(formData: FormData) {
     if (assignedToObjId) {
       newTask.assignedTo = assignedToObjId;
       newTask.assignedToName = assignedToName;
+    }
+
+    if (deadline) {
+      newTask.deadline = deadline;
     }
 
     const result = await collection.insertOne(newTask);
@@ -494,6 +506,7 @@ export async function getTasks(): Promise<Task[]> {
           assignedToName,
           createdBy: task.createdBy?.toString() || task.userId?.toString(),
           createdByName: createdByName || "Unknown",
+          deadline: task.deadline,
           createdAt: task.createdAt,
           updatedAt: task.updatedAt,
         };
@@ -524,6 +537,7 @@ export async function updateTask(taskId: string, formData: FormData) {
     const description = formData.get("description") as string;
     const completed = formData.get("completed") === "true";
     const assignedToId = formData.get("assignedTo") as string;
+    const deadlineStr = formData.get("deadline") as string;
 
     if (!title || title.trim() === "") {
       return { success: false, error: "Title is required" };
@@ -568,6 +582,12 @@ export async function updateTask(taskId: string, formData: FormData) {
       }
     }
 
+    // Parse deadline if provided
+    let deadline: Date | undefined;
+    if (deadlineStr && deadlineStr.trim() !== "") {
+      deadline = new Date(deadlineStr);
+    }
+
     const updateData: any = {
       title: title.trim(),
       description: description?.trim() || "",
@@ -580,11 +600,20 @@ export async function updateTask(taskId: string, formData: FormData) {
       updateData.assignedToName = assignedToName;
     }
 
+    if (deadline) {
+      updateData.deadline = deadline;
+    }
+
     const updateQuery: any = { $set: updateData };
     
     // Remove assignment if empty
     if (!assignedToObjId) {
       updateQuery.$unset = { assignedTo: "", assignedToName: "" };
+    }
+
+    // Remove deadline if empty
+    if (!deadline) {
+      updateQuery.$unset = { ...updateQuery.$unset, deadline: "" };
     }
 
     const result = await collection.updateOne(

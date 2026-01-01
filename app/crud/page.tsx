@@ -19,13 +19,13 @@ export default function CrudPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [formData, setFormData] = useState({ title: "", description: "", assignedTo: "" });
+  const [formData, setFormData] = useState({ title: "", description: "", assignedTo: "", deadline: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   
   // Filter states
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "overdue">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<"list" | "board">("list");
 
@@ -68,12 +68,15 @@ export default function CrudPage() {
       if (formData.assignedTo) {
         formDataObj.append("assignedTo", formData.assignedTo);
       }
+      if (formData.deadline) {
+        formDataObj.append("deadline", formData.deadline);
+      }
 
       const result = await updateTask(editingTask._id!, formDataObj);
       if (result.success) {
         setSuccess("Task updated successfully!");
         setEditingTask(null);
-        setFormData({ title: "", description: "", assignedTo: "" });
+        setFormData({ title: "", description: "", assignedTo: "", deadline: "" });
         setShowForm(false);
         await loadTasks();
       } else {
@@ -86,11 +89,14 @@ export default function CrudPage() {
       if (formData.assignedTo) {
         formDataObj.append("assignedTo", formData.assignedTo);
       }
+      if (formData.deadline) {
+        formDataObj.append("deadline", formData.deadline);
+      }
 
       const result = await createTask(formDataObj);
       if (result.success) {
         setSuccess("Task created successfully!");
-        setFormData({ title: "", description: "", assignedTo: "" });
+        setFormData({ title: "", description: "", assignedTo: "", deadline: "" });
         setShowForm(false);
         await loadTasks();
       } else {
@@ -105,6 +111,7 @@ export default function CrudPage() {
       title: task.title,
       description: task.description,
       assignedTo: task.assignedTo || "",
+      deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "",
     });
     setShowForm(true);
     setError(null);
@@ -113,7 +120,7 @@ export default function CrudPage() {
 
   const handleCancel = () => {
     setEditingTask(null);
-    setFormData({ title: "", description: "", assignedTo: "" });
+    setFormData({ title: "", description: "", assignedTo: "", deadline: "" });
     setShowForm(false);
     setError(null);
     setSuccess(null);
@@ -143,10 +150,17 @@ export default function CrudPage() {
     }
   };
 
+  // Helper to check if task is overdue
+  const isTaskOverdue = (task: Task) => {
+    if (!task.deadline || task.completed) return false;
+    return new Date(task.deadline) < new Date();
+  };
+
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
     if (statusFilter === "completed" && !task.completed) return false;
     if (statusFilter === "pending" && task.completed) return false;
+    if (statusFilter === "overdue" && !isTaskOverdue(task)) return false;
 
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
@@ -160,6 +174,7 @@ export default function CrudPage() {
 
   const pendingTasks = filteredTasks.filter((t) => !t.completed);
   const completedTasks = filteredTasks.filter((t) => t.completed);
+  const overdueTasks = tasks.filter((t) => isTaskOverdue(t));
   const completionRate = tasks.length > 0 ? Math.round((tasks.filter((t) => t.completed).length / tasks.length) * 100) : 0;
 
   const getInitials = (name: string) => {
@@ -177,16 +192,60 @@ export default function CrudPage() {
     return colors[name.charCodeAt(0) % colors.length];
   };
 
-  const TaskCard = ({ task }: { task: Task }) => (
+  // Helper functions for deadline display
+  const isOverdue = (deadline: Date | undefined, completed: boolean) => {
+    if (!deadline || completed) return false;
+    return new Date(deadline) < new Date();
+  };
+
+  const isDueSoon = (deadline: Date | undefined, completed: boolean) => {
+    if (!deadline || completed) return false;
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const diffHours = (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return diffHours > 0 && diffHours <= 24;
+  };
+
+  const formatDeadline = (deadline: Date) => {
+    const date = new Date(deadline);
+    const now = new Date();
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `Tomorrow at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === -1) {
+      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays < -1) {
+      return `${Math.abs(diffDays)} days overdue`;
+    } else if (diffDays <= 7) {
+      return `In ${diffDays} days`;
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+    }
+  };
+
+  const TaskCard = ({ task }: { task: Task }) => {
+    const overdue = isOverdue(task.deadline, task.completed);
+    const dueSoon = isDueSoon(task.deadline, task.completed);
+    
+    return (
     <div
       className={`group relative bg-white dark:bg-gray-800 rounded-xl border-2 transition-all duration-300 overflow-hidden ${
         task.completed
           ? "border-gray-200 dark:border-gray-700 opacity-75"
+          : overdue
+          ? "border-red-300 dark:border-red-700 hover:border-red-400 hover:shadow-lg"
+          : dueSoon
+          ? "border-amber-300 dark:border-amber-700 hover:border-amber-400 hover:shadow-lg"
           : "border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:shadow-lg"
       }`}
     >
       {/* Priority indicator */}
-      <div className={`absolute top-0 left-0 right-0 h-1 ${task.completed ? "bg-green-500" : "bg-blue-500"}`} />
+      <div className={`absolute top-0 left-0 right-0 h-1 ${
+        task.completed ? "bg-green-500" : overdue ? "bg-red-500" : dueSoon ? "bg-amber-500" : "bg-blue-500"
+      }`} />
 
       <div className="p-5">
         <div className="flex items-start gap-4">
@@ -227,6 +286,24 @@ export default function CrudPage() {
 
             {/* Meta info */}
             <div className="flex flex-wrap items-center gap-3">
+              {/* Deadline badge */}
+              {task.deadline && (
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium ${
+                  task.completed
+                    ? "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    : overdue
+                    ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
+                    : dueSoon
+                    ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+                    : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                }`}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{formatDeadline(task.deadline)}</span>
+                </div>
+              )}
+
               {task.assignedToName && (
                 <div className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getAvatarColor(task.assignedToName)} flex items-center justify-center`}>
@@ -277,6 +354,7 @@ export default function CrudPage() {
       </div>
     </div>
   );
+  };
 
   return (
     <ProtectedRoute>
@@ -314,6 +392,15 @@ export default function CrudPage() {
                   <p className="text-3xl font-bold text-white">{pendingTasks.length}</p>
                   <p className="text-blue-200 text-sm">In Progress</p>
                 </div>
+                {overdueTasks.length > 0 && (
+                  <div className="bg-red-500/20 backdrop-blur-sm rounded-xl px-6 py-4 border border-red-400/30 min-w-[120px]">
+                    <div className="flex items-center gap-2">
+                      <p className="text-3xl font-bold text-white">{overdueTasks.length}</p>
+                      <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                    </div>
+                    <p className="text-red-200 text-sm">Overdue</p>
+                  </div>
+                )}
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/20 min-w-[120px]">
                   <div className="flex items-center gap-2">
                     <p className="text-3xl font-bold text-white">{completionRate}%</p>
@@ -381,16 +468,19 @@ export default function CrudPage() {
               {/* Filters */}
               <div className="flex items-center gap-2">
                 <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                  {(["all", "pending", "completed"] as const).map((status) => (
+                  {(["all", "pending", "overdue", "completed"] as const).map((status) => (
                     <button
                       key={status}
                       onClick={() => setStatusFilter(status)}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
                         statusFilter === status
                           ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
                           : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
+                      {status === "overdue" && overdueTasks.length > 0 && (
+                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      )}
                       {status.charAt(0).toUpperCase() + status.slice(1)}
                     </button>
                   ))}
@@ -432,7 +522,7 @@ export default function CrudPage() {
                 onClick={() => {
                   setShowForm(true);
                   setEditingTask(null);
-                  setFormData({ title: "", description: "", assignedTo: "" });
+                  setFormData({ title: "", description: "", assignedTo: "", deadline: "" });
                 }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl transition-all shadow-lg hover:shadow-xl"
               >
@@ -491,6 +581,19 @@ export default function CrudPage() {
                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
                       placeholder="Add more details..."
               />
+            </div>
+
+            <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Deadline
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.deadline}
+                      onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+                    <p className="mt-2 text-xs text-gray-500">Optional: Set a due date for this task</p>
             </div>
 
             <div>
