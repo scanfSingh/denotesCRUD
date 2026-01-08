@@ -920,19 +920,26 @@ export default function TopicsPage() {
 
                   {/* Content */}
                   <div className="p-6">
-                    {/* Subject Badge */}
-                    {selectedTopic.subjectId && (() => {
-                      const subject = subjects.find(s => s._id === selectedTopic.subjectId);
+                    {/* Subject Badge - shows direct or inherited subject */}
+                    {(() => {
+                      const topicSubjectId = getTopicSubject(selectedTopic);
+                      if (!topicSubjectId) return null;
+                      const subject = subjects.find(s => s._id === topicSubjectId);
                       if (!subject) return null;
+                      const isInherited = !selectedTopic.subjectId && selectedTopic.parentTopicId;
                       return (
-                        <div className="mb-4">
+                        <div className="mb-6">
+                          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Subject</h3>
                           <button
-                            onClick={() => handleSubjectClick(subject)}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
-                            style={{ backgroundColor: `${subject.color}20`, color: subject.color }}
+                            onClick={() => { setActiveSubjectFilter(subject._id!); handleSubjectClick(subject); }}
+                            className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:shadow-md"
+                            style={{ backgroundColor: `${subject.color}15`, color: subject.color, border: `1px solid ${subject.color}30` }}
                           >
-                            <div className="w-3 h-3 rounded" style={{ backgroundColor: subject.color }} />
-                            {subject.title}
+                            <div className="w-4 h-4 rounded" style={{ backgroundColor: subject.color }} />
+                            <span className="font-semibold">{subject.title}</span>
+                            {isInherited && (
+                              <span className="text-xs opacity-70 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded">inherited</span>
+                            )}
                           </button>
                         </div>
                       );
