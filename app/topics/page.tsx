@@ -719,10 +719,14 @@ export default function TopicsPage() {
                 {/* Sidebar Header */}
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-bold text-gray-900 dark:text-white">Subjects & Topics</h2>
+                    <h2 className="font-bold text-gray-900 dark:text-white">
+                      {activeSubjectFilter === null ? "All Topics" : 
+                       activeSubjectFilter === "unassigned" ? "Unassigned Topics" :
+                       subjects.find(s => s._id === activeSubjectFilter)?.title || "Topics"}
+                    </h2>
                     <div className="flex gap-1">
-                      {topics.length > 0 && (
-                        <button onClick={handleSelectAll} className={`p-2 rounded-lg transition-colors ${selectedTopicIds.size === topics.length ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title={selectedTopicIds.size === topics.length ? "Deselect All" : "Select All"}>
+                      {filteredTopics.length > 0 && (
+                        <button onClick={handleSelectAll} className={`p-2 rounded-lg transition-colors ${selectedTopicIds.size === filteredTopics.length ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title={selectedTopicIds.size === filteredTopics.length ? "Deselect All" : "Select All"}>
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z" clipRule="evenodd" /></svg>
                     </button>
                   )}
@@ -739,13 +743,9 @@ export default function TopicsPage() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 mb-2">
-                    <button onClick={() => { setEditingSubject(null); setSubjectFormData({ title: "", description: "", color: "#6366f1" }); setShowSubjectForm(true); }} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium py-2 px-3 rounded-xl transition-all shadow-lg hover:shadow-xl text-sm">
+                    <button onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "", subjectId: activeSubjectFilter && activeSubjectFilter !== "unassigned" ? activeSubjectFilter : "" }); setShowForm(true); }} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2 px-3 rounded-xl transition-all shadow-lg hover:shadow-xl text-sm">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      Subject
-                    </button>
-                    <button onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" }); setShowForm(true); }} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2 px-3 rounded-xl transition-all shadow-lg hover:shadow-xl text-sm">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      Topic
+                      New Topic
                     </button>
                   </div>
                     {selectedTopicIds.size > 0 && (
@@ -756,87 +756,30 @@ export default function TopicsPage() {
                     )}
                 </div>
 
-                {/* Subject & Topic Tree */}
+                {/* Topic Tree */}
                 <div className="p-3 max-h-[calc(100vh-400px)] overflow-y-auto">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                       <p className="mt-3 text-sm text-gray-500">Loading...</p>
                     </div>
-                  ) : subjects.length === 0 && topicTree.length === 0 ? (
+                  ) : topicTree.length === 0 ? (
                     <div className="text-center py-12">
                       <svg className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                       </svg>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{searchQuery ? "No topics found" : "Create a subject or topic to get started"}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{searchQuery ? "No topics found" : "No topics in this view"}</p>
+                      <button
+                        onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "", subjectId: activeSubjectFilter && activeSubjectFilter !== "unassigned" ? activeSubjectFilter : "" }); setShowForm(true); }}
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        Add Topic
+                      </button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {/* Render subjects with their topics */}
-                      {subjects.map((subject) => {
-                        const subjectTopics = filteredTopics.filter(t => t.subjectId === subject._id && !t.parentTopicId);
-                        const subjectTopicTree = buildTree(filteredTopics.filter(t => t.subjectId === subject._id));
-                        const isExpanded = expandedSubjects.has(subject._id!);
-                        const isSelected = selectedSubject?._id === subject._id;
-                        const topicCount = filteredTopics.filter(t => t.subjectId === subject._id).length;
-
-                        return (
-                          <div key={subject._id} className="select-none">
-                            <div
-                              className={`group flex items-center gap-2 py-2.5 px-3 rounded-lg cursor-pointer transition-all duration-200 ${isSelected ? "bg-purple-100 dark:bg-purple-900/50 border-l-4" : "hover:bg-gray-100 dark:hover:bg-gray-700/50"}`}
-                              style={{ borderLeftColor: isSelected ? subject.color : "transparent" }}
-                            >
-                              <button
-                                onClick={(e) => { e.stopPropagation(); toggleSubjectExpand(subject._id!); }}
-                                className="w-5 h-5 flex items-center justify-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                              >
-                                <svg className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                </svg>
-                              </button>
-                              <div
-                                className="w-4 h-4 rounded flex-shrink-0"
-                                style={{ backgroundColor: subject.color || "#6366f1" }}
-                              />
-                              <span
-                                onClick={() => handleSubjectClick(subject)}
-                                className={`flex-1 text-sm font-semibold truncate ${isSelected ? "text-purple-700 dark:text-purple-300" : "text-gray-900 dark:text-white"}`}
-                              >
-                                {subject.title}
-                              </span>
-                              <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                                {topicCount}
-                              </span>
-                            </div>
-                            {isExpanded && subjectTopicTree.length > 0 && (
-                              <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-1">
-                                {subjectTopicTree.map((node) => renderTreeNode(node))}
-                              </div>
-                  )}
-                </div>
-                        );
-                      })}
-                      
-                      {/* Render topics without a subject */}
-                      {(() => {
-                        const unassignedTopics = filteredTopics.filter(t => !t.subjectId && !t.parentTopicId);
-                        const unassignedTree = buildTree(filteredTopics.filter(t => !t.subjectId));
-                        if (unassignedTree.length === 0) return null;
-                        
-                        return (
-                          <div className="select-none">
-                            <div className="flex items-center gap-2 py-2 px-3 text-gray-500 dark:text-gray-400">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                              </svg>
-                              <span className="text-xs font-medium uppercase tracking-wider">Unassigned Topics</span>
-                            </div>
-                            <div className="space-y-1">
-                              {unassignedTree.map((node) => renderTreeNode(node))}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                    <div className="space-y-1">
+                      {topicTree.map((node) => renderTreeNode(node))}
                     </div>
                   )}
                 </div>
