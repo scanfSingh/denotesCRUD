@@ -324,7 +324,7 @@ export default function TopicsViewPage() {
     );
   };
 
-  const topicTree = buildTree(topics);
+  const topicTree = buildTree(filteredTopics);
 
   return (
     <ProtectedRoute>
@@ -517,7 +517,9 @@ export default function TopicsViewPage() {
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-750">
                     <div className="flex items-center justify-between">
                       <h2 className="font-bold text-gray-900 dark:text-white">
-                        Topic Navigator
+                        {activeSubjectFilter === null ? "All Topics" : 
+                         activeSubjectFilter === "unassigned" ? "Unassigned" :
+                         subjects.find(s => s._id === activeSubjectFilter)?.title || "Topics"}
                       </h2>
                       <div className="flex gap-1">
                         <button
