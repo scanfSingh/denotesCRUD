@@ -41,12 +41,22 @@ export interface Task {
   updatedAt?: Date;
 }
 
+export interface Subject {
+  _id?: string;
+  title: string;
+  description: string;
+  color?: string; // Optional color for visual distinction
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface Topic {
   _id?: string;
   title: string;
   description: string;
   linkedTopics: string[]; // Array of topic IDs this topic is linked to
   parentTopicId?: string; // Optional parent for hierarchical display
+  subjectId?: string; // Optional subject this topic belongs to
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -771,6 +781,7 @@ export async function createTopic(formData: FormData) {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const parentTopicId = formData.get("parentTopicId") as string;
+    const subjectId = formData.get("subjectId") as string;
 
     if (!title || title.trim() === "") {
       return { success: false, error: "Title is required" };
@@ -787,6 +798,10 @@ export async function createTopic(formData: FormData) {
 
     if (parentTopicId && parentTopicId.trim() !== "") {
       newTopic.parentTopicId = parentTopicId.trim();
+    }
+
+    if (subjectId && subjectId.trim() !== "") {
+      newTopic.subjectId = subjectId.trim();
     }
 
     const result = await collection.insertOne(newTopic);
@@ -823,6 +838,7 @@ export async function getTopics(): Promise<Topic[]> {
         id.toString()
       ),
       parentTopicId: topic.parentTopicId?.toString(),
+      subjectId: topic.subjectId?.toString(),
       createdAt: topic.createdAt,
       updatedAt: topic.updatedAt,
     }));
@@ -861,6 +877,7 @@ export async function getTopic(topicId: string): Promise<Topic | null> {
         id.toString()
       ),
       parentTopicId: topic.parentTopicId?.toString(),
+      subjectId: topic.subjectId?.toString(),
       createdAt: topic.createdAt,
       updatedAt: topic.updatedAt,
     };
@@ -885,6 +902,7 @@ export async function updateTopic(topicId: string, formData: FormData) {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const parentTopicId = formData.get("parentTopicId") as string;
+    const subjectId = formData.get("subjectId") as string;
 
     if (!title || title.trim() === "") {
       return { success: false, error: "Title is required" };
@@ -900,6 +918,12 @@ export async function updateTopic(topicId: string, formData: FormData) {
       updateData.parentTopicId = parentTopicId.trim();
     } else if (parentTopicId === "") {
       updateData.parentTopicId = null;
+    }
+
+    if (subjectId && subjectId.trim() !== "") {
+      updateData.subjectId = subjectId.trim();
+    } else if (subjectId === "") {
+      updateData.subjectId = null;
     }
 
     const result = await collection.updateOne(
@@ -1043,6 +1067,195 @@ export async function unlinkTopics(topicId: string, linkedTopicId: string) {
   } catch (error) {
     console.error("Error unlinking topics:", error);
     return { success: false, error: "Failed to unlink topics" };
+  }
+}
+
+// ========== SUBJECT CRUD OPERATIONS ==========
+
+// CREATE - Add a new subject
+export async function createSubject(formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("subjects");
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const color = formData.get("color") as string;
+
+    if (!title || title.trim() === "") {
+      return { success: false, error: "Title is required" };
+    }
+
+    const newSubject: any = {
+      title: title.trim(),
+      description: description?.trim() || "",
+      color: color?.trim() || "#6366f1", // Default indigo color
+      userId: new ObjectId(userId),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await collection.insertOne(newSubject);
+    revalidatePath("/topics");
+    return { success: true, id: result.insertedId.toString() };
+  } catch (error) {
+    console.error("Error creating subject:", error);
+    return { success: false, error: "Failed to create subject" };
+  }
+}
+
+// READ - Get all subjects
+export async function getSubjects(): Promise<Subject[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return [];
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("subjects");
+
+    const subjects = await collection
+      .find({ userId: new ObjectId(userId) })
+      .sort({ title: 1 })
+      .toArray();
+
+    return subjects.map((subject) => ({
+      _id: subject._id.toString(),
+      title: subject.title,
+      description: subject.description || "",
+      color: subject.color || "#6366f1",
+      createdAt: subject.createdAt,
+      updatedAt: subject.updatedAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching subjects:", error);
+    return [];
+  }
+}
+
+// READ - Get a single subject by ID
+export async function getSubject(subjectId: string): Promise<Subject | null> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return null;
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("subjects");
+
+    const subject = await collection.findOne({
+      _id: new ObjectId(subjectId),
+      userId: new ObjectId(userId),
+    });
+
+    if (!subject) {
+      return null;
+    }
+
+    return {
+      _id: subject._id.toString(),
+      title: subject.title,
+      description: subject.description || "",
+      color: subject.color || "#6366f1",
+      createdAt: subject.createdAt,
+      updatedAt: subject.updatedAt,
+    };
+  } catch (error) {
+    console.error("Error fetching subject:", error);
+    return null;
+  }
+}
+
+// UPDATE - Update a subject
+export async function updateSubject(subjectId: string, formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("subjects");
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const color = formData.get("color") as string;
+
+    if (!title || title.trim() === "") {
+      return { success: false, error: "Title is required" };
+    }
+
+    const updateData: any = {
+      title: title.trim(),
+      description: description?.trim() || "",
+      color: color?.trim() || "#6366f1",
+      updatedAt: new Date(),
+    };
+
+    const result = await collection.updateOne(
+      { _id: new ObjectId(subjectId), userId: new ObjectId(userId) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return { success: false, error: "Subject not found" };
+    }
+
+    revalidatePath("/topics");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating subject:", error);
+    return { success: false, error: "Failed to update subject" };
+  }
+}
+
+// DELETE - Delete a subject
+export async function deleteSubject(subjectId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const subjectsCollection = db.collection("subjects");
+    const topicsCollection = db.collection("topics");
+
+    // Remove subjectId from all topics that reference this subject
+    await topicsCollection.updateMany(
+      {
+        userId: new ObjectId(userId),
+        subjectId: subjectId,
+      },
+      { $unset: { subjectId: "" } }
+    );
+
+    const result = await subjectsCollection.deleteOne({
+      _id: new ObjectId(subjectId),
+      userId: new ObjectId(userId),
+    });
+
+    if (result.deletedCount === 0) {
+      return { success: false, error: "Subject not found" };
+    }
+
+    revalidatePath("/topics");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting subject:", error);
+    return { success: false, error: "Failed to delete subject" };
   }
 }
 

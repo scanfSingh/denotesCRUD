@@ -9,7 +9,12 @@ import {
   deleteTopic,
   linkTopics,
   unlinkTopics,
+  createSubject,
+  getSubjects,
+  updateSubject,
+  deleteSubject,
   type Topic,
+  type Subject,
 } from "../actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
@@ -211,31 +216,57 @@ function ParentTopicSelector({ topics, selectedId, onChange, excludeId }: Parent
   );
 }
 
+// Subject colors for selection
+const SUBJECT_COLORS = [
+  "#6366f1", // Indigo
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#ef4444", // Red
+  "#f97316", // Orange
+  "#eab308", // Yellow
+  "#22c55e", // Green
+  "#14b8a6", // Teal
+  "#06b6d4", // Cyan
+  "#3b82f6", // Blue
+];
+
 export default function TopicsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
-  const [formData, setFormData] = useState({ title: "", description: "", parentTopicId: "" });
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [formData, setFormData] = useState({ title: "", description: "", parentTopicId: "", subjectId: "" });
+  const [subjectFormData, setSubjectFormData] = useState({ title: "", description: "", color: "#6366f1" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
   const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    loadTopics();
+    loadTopicsAndSubjects();
   }, []);
 
-  const loadTopics = async () => {
+  const loadTopicsAndSubjects = async () => {
     setLoading(true);
     try {
-      const fetchedTopics = await getTopics();
+      const [fetchedTopics, fetchedSubjects] = await Promise.all([
+        getTopics(),
+        getSubjects(),
+      ]);
       setTopics(fetchedTopics);
+      setSubjects(fetchedSubjects);
       const allIds = new Set(fetchedTopics.map((t) => t._id!));
       setExpandedNodes(allIds);
+      const allSubjectIds = new Set(fetchedSubjects.map((s) => s._id!));
+      setExpandedSubjects(allSubjectIds);
       if (selectedTopic) {
         const refreshed = await getTopic(selectedTopic._id!);
         if (refreshed) setSelectedTopic(refreshed);
@@ -277,41 +308,92 @@ export default function TopicsPage() {
       formDataObj.append("title", formData.title);
       formDataObj.append("description", formData.description);
       formDataObj.append("parentTopicId", formData.parentTopicId);
+      formDataObj.append("subjectId", formData.subjectId);
       const result = await updateTopic(editingTopic._id!, formDataObj);
       if (result.success) {
         setSuccess("Topic updated successfully!");
         setEditingTopic(null);
-        setFormData({ title: "", description: "", parentTopicId: "" });
+        setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" });
         setShowForm(false);
-        await loadTopics();
+        await loadTopicsAndSubjects();
       } else setError(result.error || "Failed to update topic");
     } else {
       const formDataObj = new FormData();
       formDataObj.append("title", formData.title);
       formDataObj.append("description", formData.description);
       formDataObj.append("parentTopicId", formData.parentTopicId);
+      formDataObj.append("subjectId", formData.subjectId);
       const result = await createTopic(formDataObj);
       if (result.success) {
         setSuccess("Topic created successfully!");
-        setFormData({ title: "", description: "", parentTopicId: "" });
+        setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" });
         setShowForm(false);
-        await loadTopics();
+        await loadTopicsAndSubjects();
       } else setError(result.error || "Failed to create topic");
+    }
+  };
+
+  const handleSubjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (editingSubject) {
+      const formDataObj = new FormData();
+      formDataObj.append("title", subjectFormData.title);
+      formDataObj.append("description", subjectFormData.description);
+      formDataObj.append("color", subjectFormData.color);
+      const result = await updateSubject(editingSubject._id!, formDataObj);
+      if (result.success) {
+        setSuccess("Subject updated successfully!");
+        setEditingSubject(null);
+        setSubjectFormData({ title: "", description: "", color: "#6366f1" });
+        setShowSubjectForm(false);
+        await loadTopicsAndSubjects();
+      } else setError(result.error || "Failed to update subject");
+    } else {
+      const formDataObj = new FormData();
+      formDataObj.append("title", subjectFormData.title);
+      formDataObj.append("description", subjectFormData.description);
+      formDataObj.append("color", subjectFormData.color);
+      const result = await createSubject(formDataObj);
+      if (result.success) {
+        setSuccess("Subject created successfully!");
+        setSubjectFormData({ title: "", description: "", color: "#6366f1" });
+        setShowSubjectForm(false);
+        await loadTopicsAndSubjects();
+      } else setError(result.error || "Failed to create subject");
     }
   };
 
   const handleEdit = (topic: Topic) => {
     setEditingTopic(topic);
-    setFormData({ title: topic.title, description: topic.description, parentTopicId: topic.parentTopicId || "" });
+    setFormData({ title: topic.title, description: topic.description, parentTopicId: topic.parentTopicId || "", subjectId: topic.subjectId || "" });
     setShowForm(true);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleEditSubject = (subject: Subject) => {
+    setEditingSubject(subject);
+    setSubjectFormData({ title: subject.title, description: subject.description, color: subject.color || "#6366f1" });
+    setShowSubjectForm(true);
     setError(null);
     setSuccess(null);
   };
 
   const handleCancel = () => {
     setEditingTopic(null);
-    setFormData({ title: "", description: "", parentTopicId: "" });
+    setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" });
     setShowForm(false);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleCancelSubject = () => {
+    setEditingSubject(null);
+    setSubjectFormData({ title: "", description: "", color: "#6366f1" });
+    setShowSubjectForm(false);
     setError(null);
     setSuccess(null);
   };
@@ -324,16 +406,29 @@ export default function TopicsPage() {
     if (result.success) {
       setSuccess("Topic deleted successfully!");
       if (selectedTopic?._id === topicId) setSelectedTopic(null);
-      await loadTopics();
+      await loadTopicsAndSubjects();
     } else setError(result.error || "Failed to delete topic");
+  };
+
+  const handleDeleteSubject = async (subjectId: string) => {
+    if (!confirm("Are you sure you want to delete this subject? Topics under this subject will become unassigned.")) return;
+    setError(null);
+    setSuccess(null);
+    const result = await deleteSubject(subjectId);
+    if (result.success) {
+      setSuccess("Subject deleted successfully!");
+      if (selectedSubject?._id === subjectId) setSelectedSubject(null);
+      await loadTopicsAndSubjects();
+    } else setError(result.error || "Failed to delete subject");
   };
 
   const handleTopicClick = async (topicId: string) => {
     const topic = await getTopic(topicId);
     if (topic) {
       setSelectedTopic(topic);
+      setSelectedSubject(null);
       setEditingTopic(null);
-      setFormData({ title: "", description: "", parentTopicId: "" });
+      setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" });
     }
   };
 
@@ -343,7 +438,7 @@ export default function TopicsPage() {
     const result = await linkTopics(selectedTopic._id!, linkedTopicId);
     if (result.success) {
       setSuccess("Topics linked successfully!");
-      await loadTopics();
+      await loadTopicsAndSubjects();
     } else setError(result.error || "Failed to link topics");
   };
 
@@ -353,8 +448,20 @@ export default function TopicsPage() {
     const result = await unlinkTopics(selectedTopic._id!, linkedTopicId);
     if (result.success) {
       setSuccess("Topics unlinked successfully!");
-      await loadTopics();
+      await loadTopicsAndSubjects();
     } else setError(result.error || "Failed to unlink topics");
+  };
+
+  const toggleSubjectExpand = (subjectId: string) => {
+    const newExpanded = new Set(expandedSubjects);
+    if (newExpanded.has(subjectId)) newExpanded.delete(subjectId);
+    else newExpanded.add(subjectId);
+    setExpandedSubjects(newExpanded);
+  };
+
+  const handleSubjectClick = (subject: Subject) => {
+    setSelectedSubject(subject);
+    setSelectedTopic(null);
   };
 
   const toggleExpand = (topicId: string) => {
@@ -459,6 +566,10 @@ export default function TopicsPage() {
 
               <div className="flex flex-wrap gap-4">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/20">
+                  <p className="text-3xl font-bold text-white">{subjects.length}</p>
+                  <p className="text-indigo-200 text-sm">Subjects</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/20">
                   <p className="text-3xl font-bold text-white">{topics.length}</p>
                   <p className="text-indigo-200 text-sm">Total Topics</p>
                 </div>
@@ -500,7 +611,7 @@ export default function TopicsPage() {
                 {/* Sidebar Header */}
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-bold text-gray-900 dark:text-white">Topics</h2>
+                    <h2 className="font-bold text-gray-900 dark:text-white">Subjects & Topics</h2>
                     <div className="flex gap-1">
                       {topics.length > 0 && (
                         <button onClick={handleSelectAll} className={`p-2 rounded-lg transition-colors ${selectedTopicIds.size === topics.length ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title={selectedTopicIds.size === topics.length ? "Deselect All" : "Select All"}>
@@ -519,36 +630,106 @@ export default function TopicsPage() {
             </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    <button onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "" }); setShowForm(true); }} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all shadow-lg hover:shadow-xl text-sm">
+                  <div className="flex gap-2 mb-2">
+                    <button onClick={() => { setEditingSubject(null); setSubjectFormData({ title: "", description: "", color: "#6366f1" }); setShowSubjectForm(true); }} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium py-2 px-3 rounded-xl transition-all shadow-lg hover:shadow-xl text-sm">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      New Topic
+                      Subject
                     </button>
+                    <button onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" }); setShowForm(true); }} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2 px-3 rounded-xl transition-all shadow-lg hover:shadow-xl text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      Topic
+                    </button>
+                  </div>
                     {selectedTopicIds.size > 0 && (
-                      <button onClick={handleShareClick} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors text-sm">
+                    <button onClick={handleShareClick} className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-xl transition-colors text-sm">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                        {selectedTopicIds.size}
+                      Share {selectedTopicIds.size} Topic{selectedTopicIds.size > 1 ? 's' : ''}
                     </button>
                     )}
-                  </div>
                 </div>
 
-                {/* Topic Tree */}
+                {/* Subject & Topic Tree */}
                 <div className="p-3 max-h-[calc(100vh-400px)] overflow-y-auto">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                       <p className="mt-3 text-sm text-gray-500">Loading...</p>
                     </div>
-                  ) : topicTree.length === 0 ? (
+                  ) : subjects.length === 0 && topicTree.length === 0 ? (
                     <div className="text-center py-12">
                       <svg className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                       </svg>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{searchQuery ? "No topics found" : "No topics yet"}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{searchQuery ? "No topics found" : "Create a subject or topic to get started"}</p>
                     </div>
                   ) : (
-                    <div className="space-y-1">{topicTree.map((node) => renderTreeNode(node))}</div>
+                    <div className="space-y-2">
+                      {/* Render subjects with their topics */}
+                      {subjects.map((subject) => {
+                        const subjectTopics = filteredTopics.filter(t => t.subjectId === subject._id && !t.parentTopicId);
+                        const subjectTopicTree = buildTree(filteredTopics.filter(t => t.subjectId === subject._id));
+                        const isExpanded = expandedSubjects.has(subject._id!);
+                        const isSelected = selectedSubject?._id === subject._id;
+                        const topicCount = filteredTopics.filter(t => t.subjectId === subject._id).length;
+
+                        return (
+                          <div key={subject._id} className="select-none">
+                            <div
+                              className={`group flex items-center gap-2 py-2.5 px-3 rounded-lg cursor-pointer transition-all duration-200 ${isSelected ? "bg-purple-100 dark:bg-purple-900/50 border-l-4" : "hover:bg-gray-100 dark:hover:bg-gray-700/50"}`}
+                              style={{ borderLeftColor: isSelected ? subject.color : "transparent" }}
+                            >
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleSubjectExpand(subject._id!); }}
+                                className="w-5 h-5 flex items-center justify-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                              >
+                                <svg className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                              <div
+                                className="w-4 h-4 rounded flex-shrink-0"
+                                style={{ backgroundColor: subject.color || "#6366f1" }}
+                              />
+                              <span
+                                onClick={() => handleSubjectClick(subject)}
+                                className={`flex-1 text-sm font-semibold truncate ${isSelected ? "text-purple-700 dark:text-purple-300" : "text-gray-900 dark:text-white"}`}
+                              >
+                                {subject.title}
+                              </span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                                {topicCount}
+                              </span>
+                            </div>
+                            {isExpanded && subjectTopicTree.length > 0 && (
+                              <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-1">
+                                {subjectTopicTree.map((node) => renderTreeNode(node))}
+                              </div>
+                  )}
+                </div>
+                        );
+                      })}
+                      
+                      {/* Render topics without a subject */}
+                      {(() => {
+                        const unassignedTopics = filteredTopics.filter(t => !t.subjectId && !t.parentTopicId);
+                        const unassignedTree = buildTree(filteredTopics.filter(t => !t.subjectId));
+                        if (unassignedTree.length === 0) return null;
+                        
+                        return (
+                          <div className="select-none">
+                            <div className="flex items-center gap-2 py-2 px-3 text-gray-500 dark:text-gray-400">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                              </svg>
+                              <span className="text-xs font-medium uppercase tracking-wider">Unassigned Topics</span>
+                            </div>
+                            <div className="space-y-1">
+                              {unassignedTree.map((node) => renderTreeNode(node))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   )}
                 </div>
               </div>
@@ -556,7 +737,96 @@ export default function TopicsPage() {
 
             {/* Main Panel */}
             <div className="flex-1 min-w-0">
-              {selectedTopic ? (
+              {selectedSubject ? (
+                /* Subject Detail View */
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {/* Subject Header */}
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700" style={{ background: `linear-gradient(135deg, ${selectedSubject.color}15 0%, ${selectedSubject.color}05 100%)` }}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: selectedSubject.color }}>
+                          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedSubject.title}</h2>
+                          {selectedSubject.createdAt && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Created {new Date(selectedSubject.createdAt).toLocaleDateString()}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEditSubject(selectedSubject)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="Edit">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <button onClick={() => handleDeleteSubject(selectedSubject._id!)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Delete">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subject Content */}
+                  <div className="p-6">
+                    {/* Description */}
+                    <div className="mb-8">
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Description</h3>
+                      {selectedSubject.description ? (
+                        <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">{selectedSubject.description}</p>
+                      ) : (
+                        <p className="text-gray-400 dark:text-gray-500 italic bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">No description provided.</p>
+                      )}
+                    </div>
+
+                    {/* Topics in this Subject */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Topics in this Subject</h3>
+                      {(() => {
+                        const subjectTopics = topics.filter(t => t.subjectId === selectedSubject._id);
+                        if (subjectTopics.length === 0) {
+                          return (
+                            <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                              <svg className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                              </svg>
+                              <p className="text-gray-500 dark:text-gray-400 mb-4">No topics in this subject yet</p>
+                              <button
+                                onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "", subjectId: selectedSubject._id! }); setShowForm(true); }}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all text-sm"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                Add Topic
+                              </button>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {subjectTopics.map((topic) => (
+                              <button
+                                key={topic._id}
+                                onClick={() => handleTopicClick(topic._id!)}
+                                className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors text-left"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                                  <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 dark:text-white truncate">{topic.title}</p>
+                                  {topic.parentTopicId && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Sub-topic</p>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              ) : selectedTopic ? (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {/* Topic Header */}
                   <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
@@ -587,6 +857,24 @@ export default function TopicsPage() {
 
                   {/* Content */}
                   <div className="p-6">
+                    {/* Subject Badge */}
+                    {selectedTopic.subjectId && (() => {
+                      const subject = subjects.find(s => s._id === selectedTopic.subjectId);
+                      if (!subject) return null;
+                      return (
+                        <div className="mb-4">
+                          <button
+                            onClick={() => handleSubjectClick(subject)}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
+                            style={{ backgroundColor: `${subject.color}20`, color: subject.color }}
+                          >
+                            <div className="w-3 h-3 rounded" style={{ backgroundColor: subject.color }} />
+                            {subject.title}
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {/* Parent Topic Breadcrumb */}
                     {selectedTopic.parentTopicId && (() => {
                       const getBreadcrumb = (topicId: string): Topic[] => {
@@ -692,7 +980,7 @@ export default function TopicsPage() {
                   <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
                     Choose a topic from the sidebar to view its details, or create a new one to get started.
                   </p>
-                  <button onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "" }); setShowForm(true); }} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg">
+                  <button onClick={() => { setEditingTopic(null); setFormData({ title: "", description: "", parentTopicId: "", subjectId: "" }); setShowForm(true); }} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                     Create New Topic
                   </button>
@@ -727,6 +1015,22 @@ export default function TopicsPage() {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject (Optional)</label>
+                  <select
+                    value={formData.subjectId}
+                    onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">No Subject</option>
+                    {subjects.map((subject) => (
+                      <option key={subject._id} value={subject._id}>
+                        {subject.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Parent Topic (Optional)</label>
                   <ParentTopicSelector topics={topics} selectedId={formData.parentTopicId} onChange={(id) => setFormData({ ...formData, parentTopicId: id })} excludeId={editingTopic?._id} />
                 </div>
@@ -741,6 +1045,54 @@ export default function TopicsPage() {
         )}
 
         <ShareTopicsModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} selectedTopicIds={Array.from(selectedTopicIds)} onSuccess={handleShareSuccess} />
+
+        {/* Subject Form Modal */}
+        {showSubjectForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingSubject ? "Edit Subject" : "Create New Subject"}</h2>
+                  <button onClick={handleCancelSubject} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubjectSubmit} className="p-6 space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject Title *</label>
+                  <input type="text" value={subjectFormData.title} onChange={(e) => setSubjectFormData({ ...subjectFormData, title: e.target.value })} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white" placeholder="Enter subject title" required autoFocus />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description (Optional)</label>
+                  <textarea value={subjectFormData.description} onChange={(e) => setSubjectFormData({ ...subjectFormData, description: e.target.value })} rows={3} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white" placeholder="Enter subject description..." />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SUBJECT_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setSubjectFormData({ ...subjectFormData, color })}
+                        className={`w-8 h-8 rounded-lg transition-all ${subjectFormData.color === color ? "ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-800" : "hover:scale-110"}`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={handleCancelSubject} className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 px-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium rounded-xl transition-all">{editingSubject ? "Update Subject" : "Create Subject"}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );
