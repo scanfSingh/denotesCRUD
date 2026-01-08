@@ -249,6 +249,7 @@ export default function TopicsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(null); // null = all, "unassigned" = no subject, or subjectId
 
   useEffect(() => {
     loadTopicsAndSubjects();
@@ -494,10 +495,21 @@ export default function TopicsPage() {
     setTimeout(() => setSuccess(null), 3000);
   };
 
-  const filteredTopics = topics.filter((t) =>
-    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTopics = topics.filter((t) => {
+    // Apply search filter
+    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Apply subject filter
+    let matchesSubject = true;
+    if (activeSubjectFilter === "unassigned") {
+      matchesSubject = !t.subjectId;
+    } else if (activeSubjectFilter !== null) {
+      matchesSubject = t.subjectId === activeSubjectFilter;
+    }
+    
+    return matchesSearch && matchesSubject;
+  });
 
   const topicTree = buildTree(filteredTopics);
   const availableTopics = topics.filter((t) => t._id !== editingTopic?._id && t._id !== selectedTopic?._id);
@@ -582,6 +594,102 @@ export default function TopicsPage() {
                   <p className="text-indigo-200 text-sm">With Links</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Subject Tabs */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
+              {/* All Topics Tab */}
+              <button
+                onClick={() => { setActiveSubjectFilter(null); setSelectedSubject(null); }}
+                className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeSubjectFilter === null
+                    ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  All
+                  <span className="text-xs bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded">{topics.length}</span>
+                </span>
+              </button>
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+
+              {/* Subject Tabs */}
+              {subjects.map((subject) => {
+                const count = topics.filter(t => t.subjectId === subject._id).length;
+                const isActive = activeSubjectFilter === subject._id;
+                return (
+                  <button
+                    key={subject._id}
+                    onClick={() => { setActiveSubjectFilter(subject._id!); setSelectedSubject(subject); setSelectedTopic(null); }}
+                    className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? "shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                    style={isActive ? { backgroundColor: `${subject.color}20`, color: subject.color } : {}}
+                  >
+                    <span className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded" style={{ backgroundColor: subject.color }} />
+                      {subject.title}
+                      <span 
+                        className="text-xs px-1.5 py-0.5 rounded"
+                        style={isActive ? { backgroundColor: `${subject.color}30` } : { backgroundColor: 'rgb(229 231 235)', color: 'inherit' }}
+                      >
+                        {count}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Unassigned Tab */}
+              {topics.some(t => !t.subjectId) && (
+                <>
+                  <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                  <button
+                    onClick={() => { setActiveSubjectFilter("unassigned"); setSelectedSubject(null); }}
+                    className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      activeSubjectFilter === "unassigned"
+                        ? "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                      Unassigned
+                      <span className="text-xs bg-gray-300 dark:bg-gray-500 px-1.5 py-0.5 rounded">
+                        {topics.filter(t => !t.subjectId).length}
+                      </span>
+                    </span>
+                  </button>
+                </>
+              )}
+
+              {/* Add Subject Button */}
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+              <button
+                onClick={() => { setEditingSubject(null); setSubjectFormData({ title: "", description: "", color: "#6366f1" }); setShowSubjectForm(true); }}
+                className="flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+              >
+                <span className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Subject
+                </span>
+              </button>
             </div>
           </div>
         </div>
