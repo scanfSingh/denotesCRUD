@@ -495,17 +495,29 @@ export default function TopicsPage() {
     setTimeout(() => setSuccess(null), 3000);
   };
 
+  // Helper function to get the subject of a topic (including inherited from parent)
+  const getTopicSubject = (topic: Topic): string | undefined => {
+    if (topic.subjectId) return topic.subjectId;
+    if (topic.parentTopicId) {
+      const parent = topics.find(t => t._id === topic.parentTopicId);
+      if (parent) return getTopicSubject(parent);
+    }
+    return undefined;
+  };
+
   const filteredTopics = topics.filter((t) => {
     // Apply search filter
     const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.description?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Apply subject filter
+    // Apply subject filter (including inherited subject from parent)
     let matchesSubject = true;
     if (activeSubjectFilter === "unassigned") {
-      matchesSubject = !t.subjectId;
+      // For unassigned, check if topic has no subject (directly or inherited)
+      matchesSubject = !getTopicSubject(t);
     } else if (activeSubjectFilter !== null) {
-      matchesSubject = t.subjectId === activeSubjectFilter;
+      // Check if topic belongs to subject (directly or through parent inheritance)
+      matchesSubject = getTopicSubject(t) === activeSubjectFilter;
     }
     
     return matchesSearch && matchesSubject;
