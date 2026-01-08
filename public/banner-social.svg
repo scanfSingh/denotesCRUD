@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0f"/>
+      <stop offset="50%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0a0a0f"/>
+    </linearGradient>
+    
+    <radialGradient id="purpleGlow2" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.5"/>
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0"/>
+    </radialGradient>
+    
+    <radialGradient id="pinkGlow2" cx="50%" cy="80%" r="50%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:0"/>
+    </radialGradient>
+    
+    <linearGradient id="textGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="50%" style="stop-color:#e879f9"/>
+      <stop offset="100%" style="stop-color:#f472b6"/>
+    </linearGradient>
+    
+    <linearGradient id="btnGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="100%" style="stop-color:#db2777"/>
+    </linearGradient>
+    
+    <linearGradient id="iconGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="50%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+    
+    <pattern id="grid2" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bgGrad2)"/>
+  <rect width="1080" height="1080" fill="url(#grid2)"/>
+  <rect width="1080" height="1080" fill="url(#purpleGlow2)"/>
+  <rect width="1080" height="1080" fill="url(#pinkGlow2)"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="200" cy="200" r="300" fill="rgba(139,92,246,0.08)"/>
+  <circle cx="880" cy="880" r="250" fill="rgba(236,72,153,0.08)"/>
+  
+  <!-- Logo centered -->
+  <g transform="translate(540, 280)">
+    <rect x="-60" y="-60" width="120" height="120" rx="28" fill="url(#iconGrad2)"/>
+    <text x="0" y="25" font-family="system-ui, -apple-system, sans-serif" font-size="70" font-weight="800" fill="white" text-anchor="middle">d</text>
+  </g>
+  
+  <!-- Brand name -->
+  <text x="540" y="460" font-family="system-ui, -apple-system, sans-serif" font-size="80" font-weight="800" fill="url(#textGrad2)" text-anchor="middle">denotes</text>
+  
+  <!-- Tagline -->
+  <text x="540" y="540" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="rgba(255,255,255,0.8)" text-anchor="middle">Your Intelligent Workspace</text>
+  
+  <!-- Feature icons row -->
+  <g transform="translate(540, 640)">
+    <!-- Tasks -->
+    <g transform="translate(-200, 0)">
+      <rect x="-35" y="-35" width="70" height="70" rx="16" fill="rgba(59,130,246,0.2)"/>
+      <text x="0" y="10" font-size="32" text-anchor="middle">✓</text>
+      <text x="0" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="middle">Tasks</text>
+    </g>
+    <!-- Topics -->
+    <g transform="translate(-67, 0)">
+      <rect x="-35" y="-35" width="70" height="70" rx="16" fill="rgba(139,92,246,0.2)"/>
+      <text x="0" y="10" font-size="32" text-anchor="middle">📝</text>
+      <text x="0" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="middle">Topics</text>
+    </g>
+    <!-- Voice -->
+    <g transform="translate(67, 0)">
+      <rect x="-35" y="-35" width="70" height="70" rx="16" fill="rgba(239,68,68,0.2)"/>
+      <text x="0" y="10" font-size="32" text-anchor="middle">🎤</text>
+      <text x="0" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="middle">Voice</text>
+    </g>
+    <!-- Share -->
+    <g transform="translate(200, 0)">
+      <rect x="-35" y="-35" width="70" height="70" rx="16" fill="rgba(34,197,94,0.2)"/>
+      <text x="0" y="10" font-size="32" text-anchor="middle">🔗</text>
+      <text x="0" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="middle">Share</text>
+    </g>
+  </g>
+  
+  <!-- CTA -->
+  <g transform="translate(540, 820)">
+    <rect x="-160" y="-35" width="320" height="70" rx="20" fill="url(#btnGrad2)"/>
+    <text x="0" y="12" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="white" text-anchor="middle">Get Started Free</text>
+  </g>
+  
+  <!-- Website URL -->
+  <text x="540" y="950" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="rgba(255,255,255,0.7)" text-anchor="middle">denotes.co.in</text>
+  
+  <!-- Decorative dots -->
+  <circle cx="150" cy="540" r="5" fill="rgba(139,92,246,0.5)"/>
+  <circle cx="930" cy="540" r="5" fill="rgba(236,72,153,0.5)"/>
+  <circle cx="180" cy="480" r="3" fill="rgba(167,139,250,0.3)"/>
+  <circle cx="900" cy="600" r="3" fill="rgba(244,114,182,0.3)"/>
+  
+  <!-- Border -->
+  <rect x="0" y="0" width="1080" height="1080" fill="none" stroke="url(#btnGrad2)" stroke-width="3" opacity="0.2"/>
+</svg>
+
+

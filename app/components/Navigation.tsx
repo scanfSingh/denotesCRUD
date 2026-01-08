@@ -57,6 +57,9 @@ export default function Navigation() {
     if (navFlags.audioNotes && featureFlags.audioNotes.enabled) {
       links.push({ href: "/audio-notes", label: "Audio Notes", icon: "🎤" });
     }
+    if (navFlags.blog && featureFlags.blog.enabled) {
+      links.push({ href: "/blog", label: "Blog", icon: "📝" });
+    }
     
     return links;
   }, [navFlags]);

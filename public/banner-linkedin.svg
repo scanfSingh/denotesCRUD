@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1584 396">
+  <defs>
+    <linearGradient id="bgGradLI" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0f"/>
+      <stop offset="30%" style="stop-color:#1a1a2e"/>
+      <stop offset="70%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0a0a0f"/>
+    </linearGradient>
+    
+    <radialGradient id="purpleGlowLI" cx="25%" cy="50%" r="40%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0"/>
+    </radialGradient>
+    
+    <radialGradient id="pinkGlowLI" cx="75%" cy="50%" r="35%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:0"/>
+    </radialGradient>
+    
+    <linearGradient id="textGradLI" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="50%" style="stop-color:#e879f9"/>
+      <stop offset="100%" style="stop-color:#f472b6"/>
+    </linearGradient>
+    
+    <linearGradient id="iconGradLI" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="50%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+    
+    <pattern id="gridLI" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1584" height="396" fill="url(#bgGradLI)"/>
+  <rect width="1584" height="396" fill="url(#gridLI)"/>
+  <rect width="1584" height="396" fill="url(#purpleGlowLI)"/>
+  <rect width="1584" height="396" fill="url(#pinkGlowLI)"/>
+  
+  <!-- Decorative orbs -->
+  <circle cx="300" cy="198" r="250" fill="rgba(139,92,246,0.06)"/>
+  <circle cx="1284" cy="198" r="200" fill="rgba(236,72,153,0.05)"/>
+  
+  <!-- Left side - Logo and brand (positioned to avoid profile picture overlap) -->
+  <g transform="translate(100, 148)">
+    <!-- Logo icon -->
+    <rect x="0" y="0" width="80" height="80" rx="18" fill="url(#iconGradLI)"/>
+    <text x="40" y="56" font-family="system-ui, -apple-system, sans-serif" font-size="46" font-weight="800" fill="white" text-anchor="middle">d</text>
+    
+    <!-- Brand name -->
+    <text x="100" y="55" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="url(#textGradLI)">denotes</text>
+  </g>
+  
+  <!-- Center - Tagline -->
+  <g transform="translate(792, 140)">
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="600" fill="white" text-anchor="middle">
+      Organize Your Mind. Capture Every Idea.
+    </text>
+    <text x="0" y="50" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="rgba(255,255,255,0.6)" text-anchor="middle">
+      Your intelligent workspace for notes, tasks, and knowledge
+    </text>
+  </g>
+  
+  <!-- Right side - Features and URL -->
+  <g transform="translate(1150, 148)">
+    <!-- Feature icons -->
+    <g transform="translate(0, -20)">
+      <rect x="0" y="0" width="50" height="50" rx="12" fill="rgba(59,130,246,0.2)"/>
+      <text x="25" y="34" font-size="24" text-anchor="middle">✓</text>
+      
+      <rect x="60" y="0" width="50" height="50" rx="12" fill="rgba(139,92,246,0.2)"/>
+      <text x="85" y="34" font-size="24" text-anchor="middle">📝</text>
+      
+      <rect x="120" y="0" width="50" height="50" rx="12" fill="rgba(239,68,68,0.2)"/>
+      <text x="145" y="34" font-size="24" text-anchor="middle">🎤</text>
+      
+      <rect x="180" y="0" width="50" height="50" rx="12" fill="rgba(34,197,94,0.2)"/>
+      <text x="205" y="34" font-size="24" text-anchor="middle">🔗</text>
+    </g>
+    
+    <!-- Website URL -->
+    <text x="115" y="75" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="rgba(255,255,255,0.8)" text-anchor="middle">denotes.co.in</text>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="550" cy="100" r="4" fill="rgba(139,92,246,0.5)"/>
+  <circle cx="1050" cy="300" r="4" fill="rgba(236,72,153,0.5)"/>
+  <circle cx="480" cy="320" r="3" fill="rgba(167,139,250,0.4)"/>
+  <circle cx="1120" cy="90" r="3" fill="rgba(244,114,182,0.4)"/>
+  <circle cx="750" cy="350" r="2" fill="rgba(139,92,246,0.3)"/>
+  <circle cx="850" cy="60" r="2" fill="rgba(236,72,153,0.3)"/>
+  
+  <!-- Subtle lines -->
+  <line x1="420" y1="198" x2="500" y2="198" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+  <line x1="1084" y1="198" x2="1120" y2="198" stroke="rgba(236,72,153,0.2)" stroke-width="1"/>
+  
+  <!-- Bottom accent line -->
+  <rect x="0" y="392" width="1584" height="4" fill="url(#textGradLI)" opacity="0.6"/>
+</svg>
+
+
