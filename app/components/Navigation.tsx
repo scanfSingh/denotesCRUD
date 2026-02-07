@@ -45,6 +45,9 @@ export default function Navigation() {
     if (navFlags.tasks) {
       links.push({ href: "/crud", label: "Tasks", icon: "✓" });
     }
+    if (navFlags.inventory) {
+      links.push({ href: "/inventory", label: "Inventory", icon: "📦" });
+    }
     if (navFlags.topics && featureFlags.topics.enabled) {
       links.push({ href: "/topics", label: "Topics", icon: "📝" });
     }

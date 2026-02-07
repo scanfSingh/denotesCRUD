@@ -88,6 +88,9 @@ export const featureFlags = {
   navigation: {
     /** Show Home link */
     home: process.env.NEXT_PUBLIC_FF_NAV_HOME !== "false",
+
+    /** Show Home Inventory link */
+    inventory: process.env.NEXT_PUBLIC_FF_NAV_INVENTORY !== "false",
     
     /** Show Tasks link */
     tasks: process.env.NEXT_PUBLIC_FF_NAV_TASKS !== "false",
