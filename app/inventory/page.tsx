@@ -180,6 +180,18 @@ function InventoryContent() {
     return item.unit ? `${formatted} ${item.unit}` : formatted;
   };
 
+  const getItemIcon = (item: InventoryItem) => {
+    const cat = (item.category || "").toLowerCase();
+    if (cat.includes("kitchen") || cat.includes("cook")) return "🍳";
+    if (cat.includes("pantry") || cat.includes("food")) return "🧺";
+    if (cat.includes("bathroom") || cat.includes("bath")) return "🧴";
+    if (cat.includes("cleaning")) return "🧹";
+    if (cat.includes("garage") || cat.includes("tool")) return "🔧";
+    if (cat.includes("office") || cat.includes("work")) return "📎";
+    if (cat.includes("health") || cat.includes("medicine")) return "💊";
+    return "📦";
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50 to-orange-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
@@ -287,113 +299,104 @@ function InventoryContent() {
                 Add items to track what you have at home and their amounts.
               </p>
               <button
-                onClick={() => setShowForm(true)}
+                onClick={openAddForm}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-medium rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all"
               >
                 + Add first item
               </button>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Item</th>
-                      <th className="text-right px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Amount</th>
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Category</th>
-                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Family</th>
-                      <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Done</th>
-                      <th className="w-24 px-6 py-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems.map((item) => (
-                      <tr
-                        key={item._id}
-                        className={`border-b border-gray-100 dark:border-gray-700/50 hover:bg-amber-50/50 dark:hover:bg-gray-700/30 transition-colors ${item.finished ? "opacity-60" : ""}`}
-                      >
-                        <td className="px-6 py-4">
-                          <span className={`font-medium text-gray-900 dark:text-white ${item.finished ? "line-through" : ""}`}>
-                            {item.name}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="font-semibold text-amber-600 dark:text-amber-400">
-                            {formatAmount(item)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.category ? (
-                            <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
-                              {item.category}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.familyName ? (
-                            <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
-                              {item.familyName}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {canMarkFinished(item) ? (
-                            <button
-                              onClick={() => handleMarkFinished(item)}
-                              className={`p-2 rounded-lg transition-colors ${
-                                item.finished
-                                  ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
-                                  : "text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
-                              }`}
-                              aria-label={item.finished ? "Mark as not finished" : "Mark as finished"}
-                              title={item.finished ? "Mark as not finished" : "Mark as finished"}
-                            >
-                              {item.finished ? (
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              ) : (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              )}
-                            </button>
-                          ) : (
-                            <span className="text-gray-300 dark:text-gray-600">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className="p-2 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                              aria-label="Edit"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {filteredItems.map((item) => (
+                <div
+                  key={item._id}
+                  className={`group relative bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:border-amber-200 dark:hover:border-amber-800/50 transition-all duration-300 ${
+                    item.finished ? "opacity-75 ring-2 ring-green-200 dark:ring-green-900/50" : ""
+                  }`}
+                >
+                  {/* Card image/icon area */}
+                  <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 flex items-center justify-center p-4">
+                    <span className="text-5xl sm:text-6xl select-none">{getItemIcon(item)}</span>
+                  </div>
+
+                  {/* Card content */}
+                  <div className="p-4">
+                    <h3 className={`font-semibold text-gray-900 dark:text-white text-lg truncate mb-1 ${item.finished ? "line-through text-gray-500 dark:text-gray-400" : ""}`}>
+                      {item.name}
+                    </h3>
+                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mb-3">
+                      {formatAmount(item)}
+                    </p>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {item.category && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                          {item.category}
+                        </span>
+                      )}
+                      {item.familyName && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                          {item.familyName}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      {canMarkFinished(item) ? (
+                        <button
+                          onClick={() => handleMarkFinished(item)}
+                          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                            item.finished
+                              ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-700 dark:hover:text-green-300"
+                          }`}
+                          aria-label={item.finished ? "Mark as not finished" : "Mark as finished"}
+                        >
+                          {item.finished ? (
+                            <>
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item)}
-                              className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              aria-label="Delete"
-                            >
+                              Done
+                            </>
+                          ) : (
+                            <>
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              Mark done
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="flex-1" />
+                      )}
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="p-2 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                          aria-label="Edit"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item)}
+                          className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          aria-label="Delete"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
