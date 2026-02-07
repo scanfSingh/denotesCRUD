@@ -77,6 +77,17 @@ export interface BlogPost {
   publishedAt?: Date;
 }
 
+export interface InventoryItem {
+  _id?: string;
+  name: string;
+  amount: number;
+  unit?: string;
+  category?: string;
+  userId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export async function testDatabaseConnection() {
   let isConnected = false;
   try {
@@ -761,6 +772,127 @@ export async function toggleTask(taskId: string, completed: boolean) {
   } catch (error) {
     console.error("Error toggling task:", error);
     return { success: false, error: "Failed to toggle task" };
+  }
+}
+
+// ========== HOME INVENTORY CRUD OPERATIONS ==========
+
+export async function getInventoryItems(): Promise<InventoryItem[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("inventory");
+    const items = await collection
+      .find({ userId: new ObjectId(userId) })
+      .sort({ category: 1, name: 1 })
+      .toArray();
+
+    return items.map((item: any) => ({
+      _id: item._id.toString(),
+      name: item.name,
+      amount: item.amount,
+      unit: item.unit,
+      category: item.category,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching inventory:", error);
+    return [];
+  }
+}
+
+export async function createInventoryItem(formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const name = (formData.get("name") as string)?.trim();
+    const amount = parseFloat((formData.get("amount") as string) || "0");
+    const unit = (formData.get("unit") as string)?.trim() || undefined;
+    const category = (formData.get("category") as string)?.trim() || undefined;
+
+    if (!name) return { success: false, error: "Name is required" };
+    if (isNaN(amount) || amount < 0) return { success: false, error: "Amount must be a valid number" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("inventory");
+
+    await collection.insertOne({
+      name,
+      amount,
+      unit,
+      category,
+      userId: new ObjectId(userId),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating inventory item:", error);
+    return { success: false, error: "Failed to create item" };
+  }
+}
+
+export async function updateInventoryItem(itemId: string, formData: FormData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const name = (formData.get("name") as string)?.trim();
+    const amount = parseFloat((formData.get("amount") as string) || "0");
+    const unit = (formData.get("unit") as string)?.trim() || undefined;
+    const category = (formData.get("category") as string)?.trim() || undefined;
+
+    if (!name) return { success: false, error: "Name is required" };
+    if (isNaN(amount) || amount < 0) return { success: false, error: "Amount must be a valid number" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("inventory");
+
+    const result = await collection.updateOne(
+      { _id: new ObjectId(itemId), userId: new ObjectId(userId) },
+      { $set: { name, amount, unit, category, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) return { success: false, error: "Item not found" };
+
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating inventory item:", error);
+    return { success: false, error: "Failed to update item" };
+  }
+}
+
+export async function deleteInventoryItem(itemId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("inventory");
+
+    const result = await collection.deleteOne({
+      _id: new ObjectId(itemId),
+      userId: new ObjectId(userId),
+    });
+
+    if (result.deletedCount === 0) return { success: false, error: "Item not found" };
+
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting inventory item:", error);
+    return { success: false, error: "Failed to delete item" };
   }
 }
 
