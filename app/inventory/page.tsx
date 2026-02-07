@@ -44,7 +44,7 @@ export default function InventoryPage() {
     }
   };
 
-  const categories = [...new Set(items.map((i) => i.category).filter(Boolean))].sort();
+  const categories = Array.from(new Set(items.map((i) => i.category).filter(Boolean))).sort();
 
   const filteredItems = items.filter((item) => {
     const matchesSearch =
