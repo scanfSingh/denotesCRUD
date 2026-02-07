@@ -1,18 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   getInventoryItems,
   createInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  markInventoryItemFinished,
+  getFamilies,
   type InventoryItem,
+  type Family,
 } from "../actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 
-export default function InventoryPage() {
+function InventoryContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const familyIdFromUrl = searchParams.get("family") || undefined;
+
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [families, setFamilies] = useState<Family[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -20,29 +29,39 @@ export default function InventoryPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | undefined>(familyIdFromUrl);
   const [formData, setFormData] = useState({
     name: "",
     amount: "",
     unit: "",
     category: "",
+    familyId: "",
   });
 
-  useEffect(() => {
-    loadItems();
-  }, []);
-
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setLoading(true);
     try {
-      const fetched = await getInventoryItems();
+      const [fetched, familiesData] = await Promise.all([
+        getInventoryItems(selectedFamilyId),
+        getFamilies(),
+      ]);
       setItems(fetched);
+      setFamilies(familiesData);
     } catch (err) {
       console.error("Failed to load inventory:", err);
       setError("Failed to load inventory");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedFamilyId]);
+
+  useEffect(() => {
+    setSelectedFamilyId(familyIdFromUrl);
+  }, [familyIdFromUrl]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
 
   const categories = Array.from(new Set(items.map((i) => i.category).filter(Boolean))).sort();
 
@@ -54,6 +73,8 @@ export default function InventoryPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const canMarkFinished = (item: InventoryItem) => item.familyId || item.userId; // Personal or family items
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -64,6 +85,7 @@ export default function InventoryPage() {
     formDataObj.append("amount", formData.amount);
     if (formData.unit) formDataObj.append("unit", formData.unit);
     if (formData.category) formDataObj.append("category", formData.category);
+    if (formData.familyId) formDataObj.append("familyId", formData.familyId);
 
     if (editingItem) {
       const result = await updateInventoryItem(editingItem._id!, formDataObj);
@@ -96,10 +118,25 @@ export default function InventoryPage() {
       amount: String(item.amount),
       unit: item.unit || "",
       category: item.category || "",
+      familyId: item.familyId || "",
     });
     setShowForm(true);
     setError(null);
     setSuccess(null);
+  };
+
+  const handleMarkFinished = async (item: InventoryItem) => {
+    if (!item._id) return;
+    setError(null);
+    const finished = !item.finished;
+    const result = await markInventoryItemFinished(item._id, finished);
+    if (result.success) {
+      setSuccess(finished ? "Item marked as finished!" : "Item unmarked");
+      await loadItems();
+      setTimeout(() => setSuccess(null), 2000);
+    } else {
+      setError(result.error || "Failed to update");
+    }
   };
 
   const handleDelete = async (item: InventoryItem) => {
@@ -115,7 +152,7 @@ export default function InventoryPage() {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", amount: "", unit: "", category: "" });
+    setFormData({ name: "", amount: "", unit: "", category: "", familyId: selectedFamilyId || "" });
   };
 
   const cancelForm = () => {
@@ -125,6 +162,18 @@ export default function InventoryPage() {
     setError(null);
   };
 
+  const openAddForm = () => {
+    setEditingItem(null);
+    setFormData({
+      name: "",
+      amount: "",
+      unit: "",
+      category: "",
+      familyId: selectedFamilyId || "",
+    });
+    setShowForm(true);
+  };
+
   const formatAmount = (item: InventoryItem) => {
     const num = Number(item.amount);
     const formatted = num === Math.floor(num) ? num.toString() : num.toLocaleString();
@@ -132,8 +181,7 @@ export default function InventoryPage() {
   };
 
   return (
-    <ProtectedRoute>
-      <Navigation />
+    <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50 to-orange-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
         {/* Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 dark:from-amber-900 dark:via-orange-900 dark:to-rose-900">
@@ -183,6 +231,20 @@ export default function InventoryPage() {
 
           {/* Toolbar */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <select
+              value={selectedFamilyId || ""}
+              onChange={(e) => {
+                const val = e.target.value || undefined;
+                setSelectedFamilyId(val);
+                router.push(val ? `/inventory?family=${val}` : "/inventory", { scroll: false });
+              }}
+              className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="">All inventory (personal + families)</option>
+              {families.map((f) => (
+                <option key={f._id} value={f._id}>{f.name}</option>
+              ))}
+            </select>
             <input
               type="text"
               placeholder="Search items..."
@@ -201,11 +263,7 @@ export default function InventoryPage() {
               ))}
             </select>
             <button
-              onClick={() => {
-                setEditingItem(null);
-                resetForm();
-                setShowForm(true);
-              }}
+              onClick={openAddForm}
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-medium rounded-xl shadow-lg transition-all"
             >
               <span>+</span>
@@ -244,6 +302,8 @@ export default function InventoryPage() {
                       <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Item</th>
                       <th className="text-right px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Amount</th>
                       <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Category</th>
+                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Family</th>
+                      <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Done</th>
                       <th className="w-24 px-6 py-4"></th>
                     </tr>
                   </thead>
@@ -251,10 +311,12 @@ export default function InventoryPage() {
                     {filteredItems.map((item) => (
                       <tr
                         key={item._id}
-                        className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-amber-50/50 dark:hover:bg-gray-700/30 transition-colors"
+                        className={`border-b border-gray-100 dark:border-gray-700/50 hover:bg-amber-50/50 dark:hover:bg-gray-700/30 transition-colors ${item.finished ? "opacity-60" : ""}`}
                       >
                         <td className="px-6 py-4">
-                          <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
+                          <span className={`font-medium text-gray-900 dark:text-white ${item.finished ? "line-through" : ""}`}>
+                            {item.name}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className="font-semibold text-amber-600 dark:text-amber-400">
@@ -268,6 +330,41 @@ export default function InventoryPage() {
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.familyName ? (
+                            <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                              {item.familyName}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {canMarkFinished(item) ? (
+                            <button
+                              onClick={() => handleMarkFinished(item)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                item.finished
+                                  ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
+                                  : "text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                              }`}
+                              aria-label={item.finished ? "Mark as not finished" : "Mark as finished"}
+                              title={item.finished ? "Mark as not finished" : "Mark as finished"}
+                            >
+                              {item.finished ? (
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                            </button>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600">—</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -363,6 +460,21 @@ export default function InventoryPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   />
                 </div>
+                {!editingItem && families.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Add to family (optional)</label>
+                    <select
+                      value={formData.familyId}
+                      onChange={(e) => setFormData({ ...formData, familyId: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    >
+                      <option value="">Personal inventory</option>
+                      {families.map((f) => (
+                        <option key={f._id} value={f._id}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -383,6 +495,21 @@ export default function InventoryPage() {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <ProtectedRoute>
+      <Navigation />
+      <Suspense fallback={
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50 to-orange-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <InventoryContent />
+      </Suspense>
     </ProtectedRoute>
   );
 }

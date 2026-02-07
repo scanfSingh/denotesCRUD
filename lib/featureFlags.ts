@@ -61,6 +61,9 @@ export const featureFlags = {
     
     /** Enable shared topics view */
     sharedTopics: process.env.NEXT_PUBLIC_FF_SHARED_TOPICS !== "false",
+    
+    /** Enable families feature for shared inventory */
+    families: process.env.NEXT_PUBLIC_FF_FAMILIES !== "false",
   },
 
   // Auth Features
@@ -112,6 +115,9 @@ export const featureFlags = {
     
     /** Show Friends link */
     friends: process.env.NEXT_PUBLIC_FF_NAV_FRIENDS !== "false",
+    
+    /** Show Families link */
+    families: process.env.NEXT_PUBLIC_FF_NAV_FAMILIES !== "false",
     
     /** Show Profile link */
     profile: process.env.NEXT_PUBLIC_FF_NAV_PROFILE !== "false",

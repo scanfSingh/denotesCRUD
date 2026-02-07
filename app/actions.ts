@@ -84,6 +84,11 @@ export interface InventoryItem {
   unit?: string;
   category?: string;
   userId?: string;
+  familyId?: string;
+  familyName?: string;
+  finished?: boolean;
+  finishedAt?: Date;
+  finishedBy?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -777,7 +782,7 @@ export async function toggleTask(taskId: string, completed: boolean) {
 
 // ========== HOME INVENTORY CRUD OPERATIONS ==========
 
-export async function getInventoryItems(): Promise<InventoryItem[]> {
+export async function getInventoryItems(familyId?: string): Promise<InventoryItem[]> {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return [];
@@ -785,20 +790,59 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("inventory");
+    const familiesCollection = db.collection("families");
+
+    let query: Record<string, unknown>;
+    const userFamilies = await familiesCollection
+      .find({ members: new ObjectId(userId) })
+      .toArray();
+    const familyIds = userFamilies.map((f) => f._id);
+    const familyNames: Record<string, string> = {};
+    for (const f of userFamilies) {
+      familyNames[f._id.toString()] = f.name;
+    }
+
+    if (familyId) {
+      const family = await familiesCollection.findOne({
+        _id: new ObjectId(familyId),
+        members: new ObjectId(userId),
+      });
+      if (!family) return [];
+      query = { familyId: new ObjectId(familyId) };
+    } else {
+      query = {
+        $or: [
+          { userId: new ObjectId(userId) },
+          ...(familyIds.length > 0
+            ? [{ familyId: { $in: familyIds } }]
+            : []),
+        ],
+      };
+    }
+
     const items = await collection
-      .find({ userId: new ObjectId(userId) })
+      .find(query)
       .sort({ category: 1, name: 1 })
       .toArray();
 
-    return items.map((item: any) => ({
-      _id: item._id.toString(),
-      name: item.name,
-      amount: item.amount,
-      unit: item.unit,
-      category: item.category,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    }));
+    return items.map((item: any) => {
+      const fid = item.familyId?.toString();
+      return {
+        _id: item._id.toString(),
+        name: item.name,
+        amount: item.amount,
+        unit: item.unit,
+        category: item.category,
+        userId: item.userId?.toString(),
+        familyId: fid,
+        familyName: fid ? familyNames[fid] : undefined,
+        finished: item.finished,
+        finishedAt: item.finishedAt,
+        finishedBy: item.finishedBy?.toString(),
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+    });
   } catch (error) {
     console.error("Error fetching inventory:", error);
     return [];
@@ -814,6 +858,7 @@ export async function createInventoryItem(formData: FormData) {
     const amount = parseFloat((formData.get("amount") as string) || "0");
     const unit = (formData.get("unit") as string)?.trim() || undefined;
     const category = (formData.get("category") as string)?.trim() || undefined;
+    const familyId = (formData.get("familyId") as string)?.trim() || undefined;
 
     if (!name) return { success: false, error: "Name is required" };
     if (isNaN(amount) || amount < 0) return { success: false, error: "Amount must be a valid number" };
@@ -821,16 +866,29 @@ export async function createInventoryItem(formData: FormData) {
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("inventory");
+    const familiesCollection = db.collection("families");
 
-    await collection.insertOne({
+    const doc: Record<string, unknown> = {
       name,
       amount,
       unit,
       category,
-      userId: new ObjectId(userId),
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    };
+
+    if (familyId) {
+      const family = await familiesCollection.findOne({
+        _id: new ObjectId(familyId),
+        members: new ObjectId(userId),
+      });
+      if (!family) return { success: false, error: "Family not found or access denied" };
+      doc.familyId = new ObjectId(familyId);
+    } else {
+      doc.userId = new ObjectId(userId);
+    }
+
+    await collection.insertOne(doc);
 
     revalidatePath("/inventory");
     return { success: true };
@@ -838,6 +896,23 @@ export async function createInventoryItem(formData: FormData) {
     console.error("Error creating inventory item:", error);
     return { success: false, error: "Failed to create item" };
   }
+}
+
+async function canModifyInventoryItem(itemId: string, userId: string): Promise<boolean> {
+  const mongoClient = await client.connect();
+  const db = mongoClient.db();
+  const collection = db.collection("inventory");
+  const item = await collection.findOne({ _id: new ObjectId(itemId) });
+  if (!item) return false;
+  if (item.userId && item.userId.toString() === userId) return true;
+  if (item.familyId) {
+    const family = await db.collection("families").findOne({
+      _id: item.familyId,
+      members: new ObjectId(userId),
+    });
+    return !!family;
+  }
+  return false;
 }
 
 export async function updateInventoryItem(itemId: string, formData: FormData) {
@@ -853,12 +928,15 @@ export async function updateInventoryItem(itemId: string, formData: FormData) {
     if (!name) return { success: false, error: "Name is required" };
     if (isNaN(amount) || amount < 0) return { success: false, error: "Amount must be a valid number" };
 
+    const canModify = await canModifyInventoryItem(itemId, userId);
+    if (!canModify) return { success: false, error: "Item not found" };
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("inventory");
 
     const result = await collection.updateOne(
-      { _id: new ObjectId(itemId), userId: new ObjectId(userId) },
+      { _id: new ObjectId(itemId) },
       { $set: { name, amount, unit, category, updatedAt: new Date() } }
     );
 
@@ -877,14 +955,14 @@ export async function deleteInventoryItem(itemId: string) {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: "Unauthorized" };
 
+    const canModify = await canModifyInventoryItem(itemId, userId);
+    if (!canModify) return { success: false, error: "Item not found" };
+
     const mongoClient = await client.connect();
     const db = mongoClient.db();
     const collection = db.collection("inventory");
 
-    const result = await collection.deleteOne({
-      _id: new ObjectId(itemId),
-      userId: new ObjectId(userId),
-    });
+    const result = await collection.deleteOne({ _id: new ObjectId(itemId) });
 
     if (result.deletedCount === 0) return { success: false, error: "Item not found" };
 
@@ -893,6 +971,37 @@ export async function deleteInventoryItem(itemId: string) {
   } catch (error) {
     console.error("Error deleting inventory item:", error);
     return { success: false, error: "Failed to delete item" };
+  }
+}
+
+export async function markInventoryItemFinished(itemId: string, finished: boolean) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const canModify = await canModifyInventoryItem(itemId, userId);
+    if (!canModify) return { success: false, error: "Item not found" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const collection = db.collection("inventory");
+
+    const updateDoc = finished
+      ? { $set: { finished: true, finishedAt: new Date(), finishedBy: new ObjectId(userId), updatedAt: new Date() } }
+      : { $set: { finished: false, updatedAt: new Date() }, $unset: { finishedAt: "", finishedBy: "" } };
+
+    const result = await collection.updateOne(
+      { _id: new ObjectId(itemId) },
+      updateDoc
+    );
+
+    if (result.matchedCount === 0) return { success: false, error: "Item not found" };
+
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error) {
+    console.error("Error marking item finished:", error);
+    return { success: false, error: "Failed to update item" };
   }
 }
 
@@ -2325,6 +2434,179 @@ export async function searchUsers(query: string): Promise<User[]> {
   } catch (error) {
     console.error("Error searching users:", error);
     return [];
+  }
+}
+
+// ========== FAMILY OPERATIONS ==========
+
+export interface Family {
+  _id: string;
+  name: string;
+  members: { userId: string; name: string; email: string }[];
+  createdBy: string;
+  createdAt?: Date;
+}
+
+export async function createFamily(name: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const trimmedName = name.trim();
+    if (!trimmedName) return { success: false, error: "Family name is required" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const familiesCollection = db.collection("families");
+    const usersCollection = db.collection("users");
+
+    const creator = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    if (!creator) return { success: false, error: "User not found" };
+
+    const result = await familiesCollection.insertOne({
+      name: trimmedName,
+      members: [new ObjectId(userId)],
+      createdBy: new ObjectId(userId),
+      createdAt: new Date(),
+    });
+
+    revalidatePath("/families");
+    revalidatePath("/inventory");
+    return { success: true, id: result.insertedId.toString() };
+  } catch (error) {
+    console.error("Error creating family:", error);
+    return { success: false, error: "Failed to create family" };
+  }
+}
+
+export async function getFamilies(): Promise<Family[]> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const familiesCollection = db.collection("families");
+    const usersCollection = db.collection("users");
+
+    const families = await familiesCollection
+      .find({ members: new ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const result: Family[] = [];
+    for (const fam of families) {
+      const memberIds = (fam.members || []).map((m: ObjectId) => m.toString());
+      const users = await usersCollection
+        .find({ _id: { $in: fam.members } })
+        .toArray();
+      const memberDetails = users.map((u: any) => ({
+        userId: u._id.toString(),
+        name: u.name || u.email,
+        email: u.email,
+      }));
+      result.push({
+        _id: fam._id.toString(),
+        name: fam.name,
+        members: memberDetails,
+        createdBy: fam.createdBy.toString(),
+        createdAt: fam.createdAt,
+      });
+    }
+    return result;
+  } catch (error) {
+    console.error("Error fetching families:", error);
+    return [];
+  }
+}
+
+export async function addMemberToFamily(familyId: string, userId: string) {
+  try {
+    const currentUserId = await getCurrentUserId();
+    if (!currentUserId) return { success: false, error: "Unauthorized" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const familiesCollection = db.collection("families");
+
+    const family = await familiesCollection.findOne({
+      _id: new ObjectId(familyId),
+      members: new ObjectId(currentUserId),
+    });
+    if (!family) return { success: false, error: "Family not found or access denied" };
+
+    const newMemberId = new ObjectId(userId);
+    if (family.members.some((m: ObjectId) => m.equals(newMemberId))) {
+      return { success: false, error: "User is already in this family" };
+    }
+
+    await familiesCollection.updateOne(
+      { _id: new ObjectId(familyId) },
+      { $addToSet: { members: newMemberId } }
+    );
+
+    revalidatePath("/families");
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error) {
+    console.error("Error adding family member:", error);
+    return { success: false, error: "Failed to add member" };
+  }
+}
+
+export async function removeMemberFromFamily(familyId: string, userId: string) {
+  try {
+    const currentUserId = await getCurrentUserId();
+    if (!currentUserId) return { success: false, error: "Unauthorized" };
+
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const familiesCollection = db.collection("families");
+
+    const family = await familiesCollection.findOne({
+      _id: new ObjectId(familyId),
+      members: new ObjectId(currentUserId),
+    });
+    if (!family) return { success: false, error: "Family not found or access denied" };
+
+    // Only creator or the member themselves can remove
+    const isCreator = family.createdBy.toString() === currentUserId;
+    const isLeavingSelf = userId === currentUserId;
+    if (!isCreator && !isLeavingSelf) {
+      return { success: false, error: "Only the family creator can remove members" };
+    }
+
+    await familiesCollection.updateOne(
+      { _id: new ObjectId(familyId) },
+      { $pull: { members: new ObjectId(userId) } } as any
+    );
+
+    // If family has no members left, delete it
+    const updated = await familiesCollection.findOne({ _id: new ObjectId(familyId) });
+    if (updated && (!updated.members || updated.members.length === 0)) {
+      await familiesCollection.deleteOne({ _id: new ObjectId(familyId) });
+    }
+
+    revalidatePath("/families");
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error) {
+    console.error("Error removing family member:", error);
+    return { success: false, error: "Failed to remove member" };
+  }
+}
+
+export async function isUserInFamily(familyId: string, userId: string): Promise<boolean> {
+  try {
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const family = await db.collection("families").findOne({
+      _id: new ObjectId(familyId),
+      members: new ObjectId(userId),
+    });
+    return !!family;
+  } catch {
+    return false;
   }
 }
 
