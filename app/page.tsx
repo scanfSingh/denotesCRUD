@@ -226,100 +226,67 @@ export default function Home() {
           />
         </div>
 
-        {/* Hero */}
-        <header className="relative z-10">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-14 sm:pb-18">
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center gap-3 mb-8">
-                {loading ? (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] text-slate-400 text-xs font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse" />
-                    Connecting…
-                  </span>
-                ) : isConnected ? (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    Connected
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                    Connection failed
-                  </span>
-                )}
-              </div>
+        {/* Hero - only for guests */}
+        {status !== "authenticated" && (
+          <header className="relative z-10">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-14 sm:pb-18">
+              <div className="flex flex-col items-center text-center">
+                <div className="flex items-center gap-3 mb-8">
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] text-slate-400 text-xs font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse" />
+                      Connecting…
+                    </span>
+                  ) : isConnected ? (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                      Connection failed
+                    </span>
+                  )}
+                </div>
 
-              <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight mb-5">
-                <span className="bg-gradient-to-r from-blue-300 via-sky-300 to-blue-400 bg-clip-text text-transparent">
-                  denotes
-                </span>
-              </h1>
-              <p className="text-lg sm:text-xl text-slate-300 max-w-xl mx-auto mb-2">
-                Notes, tasks, and knowledge — in one place.
-              </p>
-              <p className="text-sm text-slate-500 max-w-md mx-auto mb-10">
-                Organize, collaborate, and build your personal knowledge base.
-              </p>
+                <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight mb-5">
+                  <span className="bg-gradient-to-r from-blue-300 via-sky-300 to-blue-400 bg-clip-text text-transparent">
+                    denotes
+                  </span>
+                </h1>
+                <p className="text-lg sm:text-xl text-slate-300 max-w-xl mx-auto mb-2">
+                  Notes, tasks, and knowledge — in one place.
+                </p>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mb-10">
+                  Organize, collaborate, and build your personal knowledge base.
+                </p>
 
-              <div className="flex flex-wrap justify-center gap-3">
-                {status === "authenticated" ? (
-                  <>
-                    <Link
-                      href="/crud"
-                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      Tasks
-                    </Link>
-                    <Link
-                      href="/topics"
-                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
-                      Topics
-                    </Link>
-                    <Link
-                      href="/topics-view"
-                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      View
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
-                    >
-                      Get started
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </Link>
-                    <Link
-                      href="/app-demo"
-                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Demo
-                    </Link>
-                  </>
-                )}
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    Get started
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
+                  <Link
+                    href="/app-demo"
+                    className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Demo
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Main Content */}
         {status === "authenticated" ? (
@@ -588,9 +555,6 @@ export default function Home() {
                 )}
               </div>
             </div>
-            <p className="mt-6 text-center text-slate-500 text-xs">
-              Next.js · MongoDB · Tailwind
-            </p>
           </div>
         </footer>
       </div>

@@ -62,8 +62,8 @@ export const featureFlags = {
     /** Enable shared topics view */
     sharedTopics: process.env.NEXT_PUBLIC_FF_SHARED_TOPICS !== "false",
     
-    /** Enable families feature for shared inventory */
-    families: process.env.NEXT_PUBLIC_FF_FAMILIES !== "false",
+    /** Families = separate app; disabled here */
+    families: process.env.NEXT_PUBLIC_FF_FAMILIES === "true",
   },
 
   // Auth Features
@@ -92,8 +92,8 @@ export const featureFlags = {
     /** Show Home link */
     home: process.env.NEXT_PUBLIC_FF_NAV_HOME !== "false",
 
-    /** Show Home Inventory link */
-    inventory: process.env.NEXT_PUBLIC_FF_NAV_INVENTORY !== "false",
+    /** Inventory = separate app; hidden by default */
+    inventory: process.env.NEXT_PUBLIC_FF_NAV_INVENTORY === "true",
     
     /** Show Tasks link */
     tasks: process.env.NEXT_PUBLIC_FF_NAV_TASKS !== "false",
@@ -116,8 +116,8 @@ export const featureFlags = {
     /** Show Friends link */
     friends: process.env.NEXT_PUBLIC_FF_NAV_FRIENDS !== "false",
     
-    /** Show Families link */
-    families: process.env.NEXT_PUBLIC_FF_NAV_FAMILIES !== "false",
+    /** Families = separate app; hidden by default */
+    families: process.env.NEXT_PUBLIC_FF_NAV_FAMILIES === "true",
     
     /** Show Profile link */
     profile: process.env.NEXT_PUBLIC_FF_NAV_PROFILE !== "false",
