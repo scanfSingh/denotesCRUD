@@ -13,7 +13,6 @@ export default function Home() {
   const [sharedTopics, setSharedTopics] = useState<SharedTopic[]>([]);
   const [loadingShared, setLoadingShared] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loadingBlogs, setLoadingBlogs] = useState(false);
 
@@ -102,70 +101,36 @@ export default function Home() {
       <div
         key={topic._id}
         onClick={() => setSelectedTopic(isSelected ? null : topic)}
-        className={`group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border transition-all duration-500 cursor-pointer overflow-hidden ${
+        className={`group rounded-xl border transition-all cursor-pointer overflow-hidden ${
           isSelected
-            ? "border-violet-500 shadow-2xl shadow-violet-500/20 scale-[1.02]"
-            : "border-white/20 dark:border-gray-700/50 hover:border-violet-400/50 hover:shadow-xl hover:shadow-violet-500/10"
+            ? "border-teal-500/60 bg-white/[0.06] shadow-lg shadow-teal-500/10"
+            : "border-white/[0.08] bg-white/[0.04] hover:border-teal-500/30 hover:bg-white/[0.06]"
         }`}
-        style={{ animationDelay: `${index * 100}ms` }}
       >
-        {/* Animated gradient border */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ padding: '1px' }}>
-          <div className="w-full h-full bg-white dark:bg-gray-800 rounded-2xl" />
-        </div>
-
-        <div className="relative p-5 bg-white/90 dark:bg-gray-800/90 rounded-2xl">
-          {/* Sharer badge */}
+        <div className="p-4">
           {sharer && (
             <div className="flex items-center gap-2 mb-3">
-              <div
-                className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(
-                  sharer.sharedByName || "U"
-                )} flex items-center justify-center ring-2 ring-white dark:ring-gray-700 shadow-lg`}
-              >
-                <span className="text-[10px] font-bold text-white">
-                  {getInitials(sharer.sharedByName || "Unknown")}
-                </span>
+              <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getAvatarColor(sharer.sharedByName || "U")} flex items-center justify-center`}>
+                <span className="text-[10px] font-bold text-white">{getInitials(sharer.sharedByName || "Unknown")}</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Shared by</span>
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{sharer.sharedByName}</span>
-              </div>
+              <span className="text-xs text-zinc-500">{sharer.sharedByName}</span>
             </div>
           )}
-
-          {/* Title */}
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors line-clamp-1">
-            {topic.title}
-          </h3>
-
-          {/* Description */}
+          <h3 className="font-semibold text-white mb-2 line-clamp-1">{topic.title}</h3>
           {topic.description && topic.description !== "<p></p>" ? (
             <div
-              className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-400 ${
-                isSelected ? "" : "line-clamp-2"
-              }`}
+              className={`prose prose-sm dark:prose-invert max-w-none text-zinc-400 text-sm ${isSelected ? "" : "line-clamp-2"}`}
               dangerouslySetInnerHTML={{ __html: topic.description }}
             />
           ) : (
-            <p className="text-gray-400 dark:text-gray-500 text-sm italic">
-              No description available
-            </p>
+            <p className="text-zinc-500 text-sm italic">No description</p>
           )}
-
-          {/* Footer */}
-          <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
-            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+          <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+            <span className="text-xs text-zinc-500">
               {topic.createdAt && new Date(topic.createdAt).toLocaleDateString()}
             </span>
-            <span className="text-xs font-medium text-violet-500 dark:text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-              {isSelected ? "Click to collapse" : "View more"}
-              <svg className={`w-3 h-3 transition-transform ${isSelected ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+            <span className="text-xs font-medium text-teal-400 opacity-0 group-hover:opacity-100 transition-opacity">
+              {isSelected ? "Collapse" : "Expand"}
             </span>
           </div>
         </div>
@@ -246,275 +211,220 @@ export default function Home() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
-        {/* Animated Background */}
+      <div className="min-h-screen bg-[#0c0c10] text-white overflow-hidden">
+        {/* Background */}
         <div className="fixed inset-0 z-0">
-          {/* Gradient orbs */}
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-600/30 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-fuchsia-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[150px]" />
-          
-          {/* Grid pattern */}
-          <div 
-            className="absolute inset-0 opacity-[0.03]"
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(16,185,129,0.12),transparent)]" />
+          <div className="absolute top-0 right-0 w-[min(80vw,600px)] h-[min(80vw,600px)] bg-teal-500/[0.06] rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-0 w-[min(60vw,400px)] h-[min(60vw,400px)] bg-emerald-500/[0.05] rounded-full blur-[80px]" />
+          <div
+            className="absolute inset-0 opacity-[0.02]"
             style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
-              backgroundSize: '60px 60px'
+              backgroundImage: `linear-gradient(rgba(255,255,255,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.15) 1px, transparent 1px)`,
+              backgroundSize: "48px 48px",
             }}
           />
-          
-          {/* Noise texture overlay */}
-          <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%" height="100%" filter="url(%23noise)"/%3E%3C/svg%3E")' }} />
         </div>
 
-        {/* Hero Section */}
-        <div className="relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-            <div className="text-center">
-              {/* Database Status - subtle indicator */}
-              <div className="mb-8">
+        {/* Hero */}
+        <header className="relative z-10">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-14 sm:pb-18">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center gap-3 mb-8">
                 {loading ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-400 text-sm">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
-                    <span>Connecting...</span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-400 text-xs font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-pulse" />
+                    Connecting…
+                  </span>
                 ) : isConnected ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                    <span>Connected</span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 text-xs font-medium border border-teal-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                    Connected
+                  </span>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                    <div className="w-2 h-2 bg-red-400 rounded-full" />
-                    <span>Connection failed</span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                    Connection failed
+                  </span>
                 )}
               </div>
 
-              {/* Main Logo */}
-              <div className="relative inline-block mb-6">
-                <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter">
-                  <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-                    denotes
-                  </span>
-                </h1>
-                {/* Glow effect */}
-                <div className="absolute inset-0 text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter blur-2xl opacity-30">
-                  <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-                    denotes
-                  </span>
-                </div>
-              </div>
-
-              {/* Tagline */}
-              <p className="text-xl md:text-2xl text-gray-400 font-light max-w-2xl mx-auto mb-4">
-                Your intelligent workspace for 
-                <span className="text-white font-medium"> notes</span>,
-                <span className="text-white font-medium"> tasks</span>, and
-                <span className="text-white font-medium"> knowledge</span>
+              <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight mb-5">
+                <span className="bg-gradient-to-r from-teal-300 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                  denotes
+                </span>
+              </h1>
+              <p className="text-lg sm:text-xl text-zinc-400 max-w-xl mx-auto mb-2">
+                Notes, tasks, and knowledge — in one place.
+              </p>
+              <p className="text-sm text-zinc-500 max-w-md mx-auto mb-10">
+                Organize, collaborate, and build your personal knowledge base.
               </p>
 
-              {/* Subtitle */}
-              <p className="text-gray-500 text-sm md:text-base mb-12 max-w-xl mx-auto">
-                Organize your thoughts, collaborate with your team, and build your personal knowledge base — all in one beautiful place.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-wrap justify-center gap-3">
                 {status === "authenticated" ? (
                   <>
                     <Link
                       href="/crud"
-                      className="group relative px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-2xl shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-teal-500 hover:bg-teal-400 text-[#0c0c10] font-semibold rounded-xl transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
-                      Task Manager
-                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                      Tasks
                     </Link>
                     <Link
                       href="/topics"
-                      className="group relative px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold rounded-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
-                      Topic Manager
+                      Topics
                     </Link>
                     <Link
                       href="/topics-view"
-                      className="group relative px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold rounded-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
-                      View Topics
+                      View
                     </Link>
                   </>
                 ) : (
                   <>
                     <Link
                       href="/login"
-                      className="group relative px-10 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-2xl shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                      className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-teal-500 hover:bg-teal-400 text-[#0c0c10] font-semibold rounded-xl transition-colors"
                     >
-                      Get Started Free
-                      <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      Get started
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
                     </Link>
                     <Link
                       href="/app-demo"
-                      className="px-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold rounded-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                      className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Watch Demo
+                      Demo
                     </Link>
                   </>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Main Content */}
         {status === "authenticated" ? (
-          /* Dashboard for authenticated users */
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            {/* Welcome Section */}
-            <div className="mb-12">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 p-8 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-sm">
-                <div className="flex items-center gap-5">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            {/* Bento: welcome + stats row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+              <div className="lg:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center">
+                    <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
-                      Welcome back{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''}!
+                    <h2 className="text-xl font-bold text-white">
+                      Hi{session?.user?.name ? `, ${session.user.name.split(" ")[0]}` : ""}
                     </h2>
-                    <p className="text-gray-400">
-                      Here&apos;s what your friends have been sharing with you
-                    </p>
+                    <p className="text-sm text-zinc-400">Shared topics from your network</p>
                   </div>
                 </div>
                 <Link
                   href="/shared-topics"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/50 text-white rounded-xl font-medium transition-all duration-300"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-white transition-colors shrink-0"
                 >
-                  View All Shared Topics
+                  View all
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               </div>
+              {sharedTopics.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Shared", value: allSharedTopics.length },
+                    { label: "People", value: Object.keys(groupedBySharer).length },
+                  ].map((stat, i) => (
+                    <div key={i} className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+                      <p className="text-2xl font-bold text-white tabular-nums">{stat.value}</p>
+                      <p className="text-xs text-zinc-500">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Stats Grid */}
-            {sharedTopics.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-                {[
-                  { label: "Shared Topics", value: allSharedTopics.length, icon: "📚", color: "from-violet-500 to-purple-600" },
-                  { label: "Contributors", value: Object.keys(groupedBySharer).length, icon: "👥", color: "from-fuchsia-500 to-pink-600" },
-                  { label: "With Links", value: allSharedTopics.filter(t => t.linkedTopics && t.linkedTopics.length > 0).length, icon: "🔗", color: "from-blue-500 to-cyan-600" },
-                  { label: "With Content", value: allSharedTopics.filter(t => t.description && t.description !== "<p></p>").length, icon: "📝", color: "from-emerald-500 to-teal-600" },
-                ].map((stat, i) => (
-                  <div key={i} className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300">
-                    <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-                    <div className="relative">
-                      <span className="text-2xl mb-3 block">{stat.icon}</span>
-                      <p className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</p>
-                      <p className="text-sm text-gray-400">{stat.label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Contributors */}
+            {/* Contributors row */}
             {Object.keys(groupedBySharer).length > 0 && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-                  Contributors
-                </h3>
-                <div className="flex flex-wrap gap-3">
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Contributors</p>
+                <div className="flex flex-wrap gap-2">
                   {Object.entries(groupedBySharer).map(([sharerId, data]) => (
                     <div
                       key={sharerId}
-                      className="group flex items-center gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/50 rounded-xl transition-all duration-300 cursor-pointer"
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08]"
                     >
-                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarColor(data.name)} flex items-center justify-center ring-2 ring-white/10 group-hover:ring-violet-500/50 transition-all`}>
-                        <span className="text-sm font-bold text-white">{getInitials(data.name)}</span>
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(data.name)} flex items-center justify-center`}>
+                        <span className="text-xs font-bold text-white">{getInitials(data.name)}</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{data.name}</p>
-                        <p className="text-xs text-gray-500">{data.topics.length} topic{data.topics.length !== 1 ? 's' : ''}</p>
-                      </div>
+                      <span className="text-sm text-white">{data.name}</span>
+                      <span className="text-xs text-zinc-500">{data.topics.length}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Loading State */}
             {loadingShared ? (
-              <div className="flex flex-col items-center justify-center py-24">
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 rounded-full border-2 border-violet-500/20" />
-                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-violet-500 animate-spin" />
-                </div>
-                <p className="mt-6 text-gray-400">Loading shared topics...</p>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-10 h-10 rounded-full border-2 border-teal-500/30 border-t-teal-400 animate-spin" />
+                <p className="mt-4 text-sm text-zinc-500">Loading shared topics…</p>
               </div>
             ) : sharedTopics.length === 0 ? (
-              /* Empty State */
-              <div className="text-center py-20 px-8 rounded-3xl bg-gradient-to-br from-white/5 to-transparent border border-white/10">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
-                  <svg className="w-12 h-12 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center py-16 px-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-teal-500/10 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">
-                  No shared topics yet
-                </h3>
-                <p className="text-gray-400 max-w-md mx-auto mb-8">
-                  When your friends share topics with you, they&apos;ll appear here. Start by adding some friends!
+                <h3 className="text-lg font-semibold text-white mb-2">No shared topics yet</h3>
+                <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-6">
+                  When friends share topics with you, they’ll show up here.
                 </p>
                 <Link
                   href="/friends"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-2xl shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 transform hover:-translate-y-1 transition-all duration-300"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-[#0c0c10] font-medium rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>
-                  Find Friends
+                  Find friends
                 </Link>
               </div>
             ) : (
-              /* Shared Topics Grid */
               <>
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500" />
-                  Recent Shared Topics
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Recent shared</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   {allSharedTopics.slice(0, 6).map((topic, index) => renderTopicCard(topic, index))}
                 </div>
-
                 {allSharedTopics.length > 6 && (
-                  <div className="text-center">
+                  <div className="flex justify-center">
                     <Link
                       href="/shared-topics"
-                      className="inline-flex items-center gap-2 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/50 text-white font-medium rounded-2xl transition-all duration-300"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-white transition-colors"
                     >
-                      View all {allSharedTopics.length} shared topics
+                      All {allSharedTopics.length} shared topics
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -524,242 +434,163 @@ export default function Home() {
               </>
             )}
 
-            {/* Quick Actions */}
-            <div className="mt-16 grid md:grid-cols-3 gap-6">
+            {/* Quick actions bento */}
+            <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { href: "/crud", title: "Task Manager", desc: "Manage your tasks", icon: "📋", color: "from-blue-500 to-cyan-500" },
-                { href: "/topics", title: "Topic Manager", desc: "Organize your topics", icon: "🏷️", color: "from-violet-500 to-purple-500" },
-                { href: "/topics-view", title: "View Topics", desc: "Browse your knowledge", icon: "👁️", color: "from-fuchsia-500 to-pink-500" },
+                { href: "/crud", title: "Tasks", desc: "Manage tasks", icon: "✓" },
+                { href: "/topics", title: "Topics", desc: "Organize topics", icon: "📝" },
+                { href: "/topics-view", title: "View", desc: "Browse knowledge", icon: "👁" },
               ].map((action, i) => (
                 <Link
                   key={i}
                   href={action.href}
-                  className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300 overflow-hidden"
+                  className="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-teal-500/30 hover:bg-white/[0.06] transition-all"
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-                  <div className="relative flex items-center gap-4">
-                    <span className="text-3xl group-hover:scale-110 transition-transform duration-300">{action.icon}</span>
-                    <div>
-                      <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors">{action.title}</h3>
-                      <p className="text-sm text-gray-400">{action.desc}</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                  <span className="w-10 h-10 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center text-lg font-medium group-hover:bg-teal-500/20 transition-colors">
+                    {action.icon}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-white">{action.title}</h3>
+                    <p className="text-xs text-zinc-500">{action.desc}</p>
                   </div>
+                  <svg className="w-4 h-4 text-zinc-500 group-hover:text-teal-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
               ))}
             </div>
-          </div>
+          </main>
         ) : (
-          /* Features Section for non-authenticated users */
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            {/* Section Header */}
-            <div className="text-center mb-16">
-              <p className="text-violet-400 font-medium tracking-wider uppercase text-sm mb-4">Features</p>
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                Everything you need to
-                <span className="block bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                  organize your mind
-                </span>
+          /* Features for guests */
+          <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center mb-12">
+              <p className="text-teal-400 font-medium text-xs uppercase tracking-wider mb-3">Features</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+                One workspace for notes, tasks & knowledge
               </h2>
-              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                A powerful suite of tools designed to help you capture, organize, and share your knowledge.
+              <p className="text-zinc-400 text-base max-w-xl mx-auto">
+                Capture, organize, and share — without the clutter.
               </p>
             </div>
 
-            {/* Features Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {features.map((feature, index) => (
                 <div
                   key={index}
-                  className="group relative p-8 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden"
-                  onMouseEnter={() => setHoveredFeature(index)}
-                  onMouseLeave={() => setHoveredFeature(null)}
+                  className="group p-6 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-teal-500/20 transition-all"
                 >
-                  {/* Hover gradient */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
-                  
-                  {/* Icon */}
-                  <div className={`relative w-16 h-16 rounded-2xl ${feature.bg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500`}>
-                    <div className={`bg-gradient-to-br ${feature.color} bg-clip-text text-transparent`}>
-                      {feature.icon}
-                    </div>
+                  <div className={`w-12 h-12 rounded-lg ${feature.bg} flex items-center justify-center mb-4 text-teal-400`}>
+                    {feature.icon}
                   </div>
-
-                  {/* Content */}
-                  <h3 className="relative text-xl font-bold text-white mb-3 group-hover:text-violet-300 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="relative text-gray-400 leading-relaxed">
-                    {feature.description}
-                  </p>
-
-                  {/* Arrow indicator */}
-                  <div className="relative mt-6 flex items-center text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="text-sm font-medium">Learn more</span>
-                    <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                  <h3 className="font-semibold text-white mb-2">{feature.title}</h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">{feature.description}</p>
                 </div>
               ))}
             </div>
 
-            {/* CTA Section */}
-            <div className="mt-20 text-center">
-              <div className="inline-flex flex-col sm:flex-row gap-4">
-                <Link
-                  href="/login"
-                  className="group relative px-10 py-5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-2xl shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
-                >
-                  Start organizing for free
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Link>
-              </div>
-              <p className="mt-4 text-gray-500 text-sm">No credit card required • Free forever</p>
+            <div className="mt-14 text-center">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-500 hover:bg-teal-400 text-[#0c0c10] font-semibold rounded-xl transition-colors"
+              >
+                Start for free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+              <p className="mt-3 text-zinc-500 text-xs">No credit card required</p>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Blog Section */}
+        {/* Blog */}
         {blogPosts.length > 0 && (
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="text-center mb-12">
-              <p className="text-violet-400 font-medium tracking-wider uppercase text-sm mb-4">Latest Posts</p>
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                From Our Blog
-              </h2>
-              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                Discover insights, tutorials, and stories from our community
-              </p>
+          <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+            <div className="text-center mb-10">
+              <p className="text-teal-400 font-medium text-xs uppercase tracking-wider mb-2">Blog</p>
+              <h2 className="text-2xl font-bold text-white">Latest posts</h2>
             </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {blogPosts.slice(0, 6).map((post, index) => (
-                <article
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {blogPosts.slice(0, 6).map((post) => (
+                <Link
                   key={post._id}
-                  className="group relative bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-violet-500/50 transition-all duration-500"
-                  style={{ animationDelay: `${index * 100}ms` }}
+                  href={`/blog/${post._id}`}
+                  className="group block rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden hover:border-teal-500/30 transition-colors"
                 >
-                  {/* Cover Image */}
                   {post.coverImage ? (
-                    <div className="h-48 overflow-hidden">
-                      <img
-                        src={post.coverImage}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                    <div className="aspect-[16/10] overflow-hidden">
+                      <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform" />
                     </div>
                   ) : (
-                    <div className="h-48 bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 flex items-center justify-center">
-                      <svg className="w-16 h-16 text-violet-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="aspect-[16/10] bg-white/[0.04] flex items-center justify-center">
+                      <svg className="w-12 h-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                       </svg>
                     </div>
                   )}
-
-                  <div className="p-6">
-                    {/* Tags */}
+                  <div className="p-4">
                     {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex flex-wrap gap-1.5 mb-2">
                         {post.tags.slice(0, 2).map((tag, i) => (
-                          <span
-                            key={i}
-                            className="px-2 py-0.5 text-xs font-medium bg-violet-500/20 text-violet-300 rounded"
-                          >
+                          <span key={i} className="px-2 py-0.5 text-xs bg-teal-500/10 text-teal-400 rounded">
                             {tag}
                           </span>
                         ))}
                       </div>
                     )}
-
-                    {/* Title */}
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-violet-300 transition-colors line-clamp-2">
-                      {post.title}
-                    </h3>
-
-                    {/* Excerpt */}
-                    <p className="text-gray-400 text-sm line-clamp-3 mb-4">
-                      {post.excerpt}
-                    </p>
-
-                    {/* Author & Date */}
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-                          <span className="text-xs font-bold text-white">
-                            {post.authorName?.charAt(0).toUpperCase() || "?"}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-400">{post.authorName}</span>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {post.publishedAt && new Date(post.publishedAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                    <h3 className="font-semibold text-white line-clamp-2 mb-2 group-hover:text-teal-400 transition-colors">{post.title}</h3>
+                    <p className="text-sm text-zinc-500 line-clamp-2 mb-3">{post.excerpt}</p>
+                    <div className="flex items-center justify-between text-xs text-zinc-500">
+                      <span>{post.authorName}</span>
+                      <span>
+                        {post.publishedAt && new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     </div>
                   </div>
-
-                  {/* Hover gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-violet-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                </article>
+                </Link>
               ))}
             </div>
-
             {blogPosts.length > 6 && (
-              <div className="text-center mt-10">
-                <Link
-                  href="/blog"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/50 text-white font-medium rounded-2xl transition-all duration-300"
-                >
-                  View All Posts
+              <div className="text-center mt-8">
+                <Link href="/blog" className="inline-flex items-center gap-2 text-sm font-medium text-teal-400 hover:text-teal-300 transition-colors">
+                  View all posts
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               </div>
             )}
-          </div>
+          </section>
         )}
 
         {/* Footer */}
-        <footer className="relative z-10 border-t border-white/10 mt-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-black bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                  denotes
-                </span>
-                <span className="text-gray-500 text-sm">• Organize your mind</span>
-              </div>
-              
-              <div className="flex items-center gap-8">
+        <footer className="relative z-10 border-t border-white/[0.06] mt-16">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span className="text-lg font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+                denotes
+              </span>
+              <div className="flex items-center gap-6 text-sm">
                 {status === "authenticated" ? (
                   <>
-                    <Link href="/crud" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Tasks</Link>
-                    <Link href="/topics" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Topics</Link>
-                    <Link href="/blog" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Blog</Link>
-                    <Link href="/friends" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Friends</Link>
-                    <Link href="/shared-topics" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Shared</Link>
+                    <Link href="/crud" className="text-zinc-500 hover:text-teal-400 transition-colors">Tasks</Link>
+                    <Link href="/topics" className="text-zinc-500 hover:text-teal-400 transition-colors">Topics</Link>
+                    <Link href="/blog" className="text-zinc-500 hover:text-teal-400 transition-colors">Blog</Link>
+                    <Link href="/friends" className="text-zinc-500 hover:text-teal-400 transition-colors">Friends</Link>
+                    <Link href="/shared-topics" className="text-zinc-500 hover:text-teal-400 transition-colors">Shared</Link>
                   </>
                 ) : (
                   <>
-                    <Link href="/login" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Sign In</Link>
-                    <Link href="/blog" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Blog</Link>
-                    <Link href="/app-demo" className="text-gray-400 hover:text-violet-400 transition-colors text-sm">Demo</Link>
+                    <Link href="/login" className="text-zinc-500 hover:text-teal-400 transition-colors">Sign in</Link>
+                    <Link href="/blog" className="text-zinc-500 hover:text-teal-400 transition-colors">Blog</Link>
+                    <Link href="/app-demo" className="text-zinc-500 hover:text-teal-400 transition-colors">Demo</Link>
                   </>
                 )}
               </div>
             </div>
-            
-            <div className="mt-8 pt-8 border-t border-white/5 text-center text-gray-500 text-sm">
-              <p>Built with ❤️ using Next.js, MongoDB, and TailwindCSS</p>
-            </div>
+            <p className="mt-6 text-center text-zinc-600 text-xs">
+              Next.js · MongoDB · Tailwind
+            </p>
           </div>
         </footer>
       </div>
