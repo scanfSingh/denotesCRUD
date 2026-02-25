@@ -297,36 +297,6 @@ export default function BlogPostPage() {
               </div>
             )}
 
-            {/* Share Buttons */}
-            <div className="border-t border-b border-gray-200 dark:border-gray-700 py-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Share this article:</p>
-              <div className="flex flex-wrap gap-2">
-                <ShareButton
-                  platform="linkedin"
-                  url={getShareUrl()}
-                  title={post.title}
-                  excerpt={post.excerpt || ""}
-                />
-                <ShareButton
-                  platform="twitter"
-                  url={getShareUrl()}
-                  title={post.title}
-                  excerpt={post.excerpt || ""}
-                />
-                <ShareButton
-                  platform="facebook"
-                  url={getShareUrl()}
-                  title={post.title}
-                  excerpt={post.excerpt || ""}
-                />
-                <ShareButton
-                  platform="copy"
-                  url={getShareUrl()}
-                  title={post.title}
-                  excerpt={post.excerpt || ""}
-                />
-              </div>
-            </div>
           </header>
 
           {/* Post Content */}
