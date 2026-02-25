@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import Navigation from "../../components/Navigation";
-import { getBlogPost, type BlogPost } from "../../actions";
+import { getBlogPost, getBlogComments, addBlogComment, type BlogPost, type BlogComment } from "../../actions";
 
 // Social Share Button Component
 function ShareButton({
@@ -126,14 +127,28 @@ function ShareButton({
 export default function BlogPostPage() {
   const params = useParams();
   const postId = params.id as string;
-  
+  const { data: session, status } = useSession();
+
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<BlogComment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPost();
   }, [postId]);
+
+  useEffect(() => {
+    if (postId) loadComments();
+  }, [postId]);
+
+  const loadComments = async () => {
+    const list = await getBlogComments(postId);
+    setComments(list);
+  };
 
   const loadPost = async () => {
     setLoading(true);
@@ -377,6 +392,73 @@ export default function BlogPostPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Written by</p>
                 <h4 className="text-xl font-bold text-gray-900 dark:text-white">{post.authorName}</h4>
               </div>
+            </div>
+          </div>
+
+          {/* Comments Section - everyone can comment; name from session or Anonymous */}
+          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Comments {comments.length > 0 && `(${comments.length})`}
+            </h3>
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 mb-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                {status === "authenticated" && session?.user
+                  ? `Commenting as ${session.user.name || session.user.email || "Anonymous"}`
+                  : "Commenting as Anonymous"}
+              </p>
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Write a comment..."
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                disabled={commentSubmitting}
+              />
+              {commentError && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{commentError}</p>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  setCommentError(null);
+                  if (!commentText.trim()) return;
+                  setCommentSubmitting(true);
+                  const result = await addBlogComment(postId, commentText.trim());
+                  setCommentSubmitting(false);
+                  if (result.success) {
+                    setCommentText("");
+                    await loadComments();
+                  } else {
+                    setCommentError(result.error || "Failed to post comment");
+                  }
+                }}
+                disabled={commentSubmitting || !commentText.trim()}
+                className="mt-3 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {commentSubmitting ? "Posting..." : "Post comment"}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 py-4">No comments yet. Be the first to comment!</p>
+              ) : (
+                comments.map((c) => (
+                  <div
+                    key={c._id}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-100 dark:border-gray-700"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-gray-900 dark:text-white">{c.authorName}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {c.createdAt ? formatDate(c.createdAt) : ""}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.content}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

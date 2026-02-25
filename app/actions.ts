@@ -77,6 +77,15 @@ export interface BlogPost {
   publishedAt?: Date;
 }
 
+export interface BlogComment {
+  _id?: string;
+  postId: string;
+  authorName: string;
+  authorId?: string; // optional, only set if user was logged in
+  content: string;
+  createdAt?: Date;
+}
+
 export interface InventoryItem {
   _id?: string;
   name: string;
@@ -3217,5 +3226,72 @@ export async function deleteBlogPost(postId: string) {
   } catch (error) {
     console.error("Error deleting blog post:", error);
     return { success: false, error: "Failed to delete blog post" };
+  }
+}
+
+// ================== BLOG COMMENTS (everyone can comment; name from session or "Anonymous") ==================
+
+export async function getBlogComments(postId: string): Promise<BlogComment[]> {
+  try {
+    if (!postId || !ObjectId.isValid(postId)) return [];
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const commentsCollection = db.collection("blogComments");
+    const comments = await commentsCollection
+      .find({ postId })
+      .sort({ createdAt: 1 })
+      .toArray();
+    return comments.map((c: any) => ({
+      _id: c._id.toString(),
+      postId: c.postId,
+      authorName: c.authorName || "Anonymous",
+      authorId: c.authorId?.toString(),
+      content: c.content,
+      createdAt: c.createdAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching blog comments:", error);
+    return [];
+  }
+}
+
+export async function addBlogComment(postId: string, content: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!postId || !ObjectId.isValid(postId)) {
+      return { success: false, error: "Invalid post" };
+    }
+    const trimmed = content?.trim();
+    if (!trimmed) {
+      return { success: false, error: "Comment cannot be empty" };
+    }
+    const mongoClient = await client.connect();
+    const db = mongoClient.db();
+    const blogsCollection = db.collection("blogs");
+    const post = await blogsCollection.findOne({ _id: new ObjectId(postId), published: true });
+    if (!post) {
+      return { success: false, error: "Post not found" };
+    }
+    let authorName = "Anonymous";
+    let authorId: ObjectId | undefined;
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const usersCollection = db.collection("users");
+      const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+      authorName = user?.name || user?.email || "Anonymous";
+      authorId = new ObjectId(userId);
+    }
+    const commentsCollection = db.collection("blogComments");
+    await commentsCollection.insertOne({
+      postId,
+      authorName,
+      authorId: authorId ?? null,
+      content: trimmed,
+      createdAt: new Date(),
+    });
+    revalidatePath(`/blog/${postId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error adding blog comment:", error);
+    return { success: false, error: "Failed to add comment" };
   }
 }
