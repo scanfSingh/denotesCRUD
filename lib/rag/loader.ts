@@ -84,9 +84,9 @@ const BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th, pre, 
 function extractBlockText($: cheerio.CheerioAPI, root: any): string {
   const blocks = root
     .find(BLOCK_SELECTOR)
-    .map((_, el) => $(el).text())
+    .map((_: number, el: any) => $(el).text())
     .get()
-    .map((t) => t.trim())
+    .map((t: string) => t.trim())
     .filter(Boolean);
 
   if (blocks.length > 0) {
