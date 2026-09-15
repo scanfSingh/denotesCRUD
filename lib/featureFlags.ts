@@ -78,6 +78,13 @@ export const featureFlags = {
     forgotPassword: process.env.NEXT_PUBLIC_FF_FORGOT_PASSWORD !== "false",
   },
 
+  // RAG Chat Feature (AI assistant grounded on ingested docs/blog content)
+  ragChat: {
+    /** Enable the floating chat widget. Off by default since it needs
+     * Upstash Vector + OpenAI configured (see RAG_CHAT_SETUP.md). */
+    enabled: process.env.NEXT_PUBLIC_FF_RAG_CHAT === "true",
+  },
+
   // UI Features
   ui: {
     /** Enable dark mode toggle */

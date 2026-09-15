@@ -9,6 +9,12 @@ import {
   toggleUserAdmin,
   type AdminUser,
 } from "../actions";
+import {
+  getRagAdminStats,
+  adminIngestRagUrls,
+  adminResetRagKnowledgeBase,
+  type RagAdminStats,
+} from "../rag-actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 
@@ -29,6 +35,14 @@ export default function AdminPage() {
   const [filterBy, setFilterBy] = useState<"all" | "verified" | "admin">("all");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Knowledge Base (RAG chat) state
+  const [ragStats, setRagStats] = useState<RagAdminStats | null>(null);
+  const [ragUrlsInput, setRagUrlsInput] = useState("");
+  const [ragIngesting, setRagIngesting] = useState(false);
+  const [ragResetting, setRagResetting] = useState(false);
+  const [ragConfirmReset, setRagConfirmReset] = useState(false);
+  const [ragLastFailedUrls, setRagLastFailedUrls] = useState<string[]>([]);
 
   useEffect(() => {
     checkAdminAndLoad();
@@ -52,11 +66,82 @@ export default function AdminPage() {
 
       setUsers(usersData);
       setStats(statsData);
+
+      // Loaded separately so a RAG misconfiguration doesn't block the
+      // rest of the admin dashboard from loading.
+      loadRagStats();
     } catch (err) {
       console.error("Error loading admin data:", err);
       setError("Failed to load admin data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRagStats = async () => {
+    try {
+      const data = await getRagAdminStats();
+      setRagStats(data);
+    } catch (err) {
+      console.error("Error loading RAG stats:", err);
+    }
+  };
+
+  const handleIngestUrls = async () => {
+    const urls = ragUrlsInput
+      .split("\n")
+      .map((u) => u.trim())
+      .filter((u) => u && !u.startsWith("#"));
+
+    if (urls.length === 0) {
+      setError("Enter at least one URL to ingest");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setRagLastFailedUrls([]);
+    setRagIngesting(true);
+
+    try {
+      const result = await adminIngestRagUrls(urls);
+      if (result.success) {
+        const { summary } = result;
+        setSuccess(
+          `Ingested ${summary.fetched}/${summary.requested} URL(s) into ${summary.chunksStored} chunk(s).`
+        );
+        setRagUrlsInput("");
+        setRagLastFailedUrls(summary.failedUrls);
+        loadRagStats();
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setRagIngesting(false);
+    }
+  };
+
+  const handleResetKnowledgeBase = async () => {
+    if (!ragConfirmReset) {
+      setRagConfirmReset(true);
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setRagResetting(true);
+    setRagConfirmReset(false);
+
+    try {
+      const result = await adminResetRagKnowledgeBase();
+      if (result.success) {
+        setSuccess("Knowledge base cleared.");
+        loadRagStats();
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setRagResetting(false);
     }
   };
 
@@ -224,6 +309,102 @@ export default function AdminPage() {
               value={stats.totalTasks}
               color="rose"
             />
+          </div>
+
+          {/* Knowledge Base (RAG Chat) Section */}
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl mb-8">
+            <div className="p-6 border-b border-slate-700/50">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white">Knowledge Base</h2>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Add pages the chat assistant can answer questions from
+                  </p>
+                </div>
+
+                {ragStats && (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                        ragStats.configured
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                          : "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                      }`}
+                    >
+                      {ragStats.configured ? "Configured" : "Not configured"}
+                    </span>
+                    {ragStats.configured && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700/50 text-slate-300">
+                        {ragStats.vectorCount ?? 0} chunk{ragStats.vectorCount === 1 ? "" : "s"} indexed
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {ragStats && !ragStats.configured && (
+                <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                  RAG chat isn&apos;t configured yet - set UPSTASH_VECTOR_REST_URL, UPSTASH_VECTOR_REST_TOKEN and
+                  OPENAI_API_KEY (see RAG_CHAT_SETUP.md) before ingesting content.
+                </p>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  URLs to ingest (one per line)
+                </label>
+                <textarea
+                  value={ragUrlsInput}
+                  onChange={(e) => setRagUrlsInput(e.target.value)}
+                  placeholder={"https://denotes.co.in/blog\nhttps://denotes.co.in/topics-view"}
+                  rows={4}
+                  disabled={ragIngesting}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono disabled:opacity-50"
+                />
+              </div>
+
+              {ragLastFailedUrls.length > 0 && (
+                <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                  <p className="font-medium mb-1">
+                    {ragLastFailedUrls.length} URL(s) couldn&apos;t be fetched:
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {ragLastFailedUrls.map((u) => (
+                      <li key={u} className="truncate">{u}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleIngestUrls}
+                  disabled={ragIngesting || !ragUrlsInput.trim()}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium bg-purple-500 text-white shadow-lg shadow-purple-500/25 hover:bg-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {ragIngesting ? "Ingesting..." : "Ingest URLs"}
+                </button>
+
+                <button
+                  onClick={handleResetKnowledgeBase}
+                  onBlur={() => setRagConfirmReset(false)}
+                  disabled={ragResetting}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    ragConfirmReset
+                      ? "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                      : "bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/30"
+                  }`}
+                >
+                  {ragResetting
+                    ? "Resetting..."
+                    : ragConfirmReset
+                    ? "Click again to confirm - this deletes everything"
+                    : "Reset Knowledge Base"}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Users Section */}
