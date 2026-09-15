@@ -16,6 +16,9 @@ export interface RagMetadata {
   sourceUrl: string;
   title: string;
   chunkIndex: number;
+  // Upstash Vector's Index<TMetadata> requires metadata to be an index
+  // signature type (Dict), since it's stored/returned as arbitrary JSON.
+  [key: string]: unknown;
 }
 
 let _index: Index<RagMetadata> | null = null;
