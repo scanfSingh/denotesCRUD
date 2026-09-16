@@ -6,9 +6,10 @@ answers questions grounded in content you ingest (docs, blog posts,
 public topic pages).
 
 Unlike a locally-run version, this implementation is fully serverless
-and deploys on Vercel: OpenAI handles generation, and Upstash Vector
-handles both embeddings and vector search (no Python, no GPU, no
-persistent server process required).
+and deploys on Vercel: Gemini handles generation (falling back to Groq
+once Gemini's free tier is exhausted), and Upstash Vector handles both
+embeddings and vector search (no Python, no GPU, no persistent server
+process required).
 
 ## How it works
 
@@ -23,7 +24,8 @@ persistent server process required).
    user question ──▶ app/api/rag/chat/route.ts ──▶ lib/rag/pipeline.ts
                                                                      │
                                                                      ▼
-                                                          OpenAI (gpt-4o-mini)
+                                                Gemini (falls back to Groq
+                                                  on quota/rate-limit errors)
                                                                      │
                                                                      ▼
                                                       answer + source URLs
@@ -38,11 +40,17 @@ persistent server process required).
 4. Click **Create**
 5. On the index's **Details** page, copy the **REST URL** and **REST Token**
 
-## Step 2: Get an OpenAI API key
+## Step 2: Get a Gemini API key (and optionally a Groq key)
 
-1. Go to [OpenAI's API keys page](https://platform.openai.com/api-keys)
-2. Create a new secret key
-3. Note: this project already depends on `openai` for the audio notes feature, so you may already have a key configured as `OPENAI_API_KEY`
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey) and create a
+   Gemini API key - it has a free tier, which is why it's used as the
+   primary generation provider here
+2. Optionally, also create a key at [console.groq.com](https://console.groq.com/keys).
+   Groq is used automatically as a fallback if Gemini returns a
+   quota/rate-limit error (e.g. once the free tier is used up for the day)
+3. Note: this project separately depends on `openai` for the unrelated
+   audio notes feature (`OPENAI_API_KEY`) - that's a different key/feature
+   and isn't used by RAG chat anymore
 
 ## Step 3: Pick an ingest secret
 
@@ -64,8 +72,9 @@ Add to `.env.local` for local development, and to your Vercel project's
 UPSTASH_VECTOR_REST_URL=https://xxxx.upstash.io
 UPSTASH_VECTOR_REST_TOKEN=xxxx
 
-# LLM (from Step 2 - reuse the existing key if you have one)
-OPENAI_API_KEY=sk-xxxx
+# LLM (from Step 2)
+GEMINI_API_KEY=xxxx
+GROQ_API_KEY=xxxx
 
 # Ingestion auth (from Step 3)
 RAG_INGEST_SECRET=xxxx
@@ -74,7 +83,8 @@ RAG_INGEST_SECRET=xxxx
 NEXT_PUBLIC_FF_RAG_CHAT=true
 
 # Optional tuning (defaults shown)
-RAG_OPENAI_MODEL=gpt-4o-mini
+RAG_GEMINI_MODEL=gemini-3.6-flash
+RAG_GROQ_MODEL=openai/gpt-oss-120b
 RAG_LLM_TEMPERATURE=0.2
 RAG_CHUNK_SIZE=800
 RAG_CHUNK_OVERLAP=150
@@ -105,7 +115,7 @@ duplicating them (each chunk's ID is derived from its URL + position).
 Once `NEXT_PUBLIC_FF_RAG_CHAT=true` is set and you're logged in, a
 floating chat button appears in the bottom-right corner of the app.
 It only shows for authenticated users, to avoid unauthenticated
-traffic running up your OpenAI bill.
+traffic burning through your Gemini/Groq quota.
 
 Check `GET /api/rag/health` (admin-only - see `ADMIN_EMAILS` in
 `app/actions.ts`) to confirm the vector store is configured and see how
@@ -123,7 +133,7 @@ many chunks are indexed.
   or call the endpoint with smaller batches of URLs.
 - Nothing here needs persistent disk or a long-running process, which
   is exactly what made the original local/Ollama version incompatible
-  with Vercel - OpenAI and Upstash Vector are both plain HTTPS APIs.
+  with Vercel - Gemini, Groq, and Upstash Vector are all plain HTTPS APIs.
 - Chat history is stored in the `rag_chat_sessions` MongoDB collection,
   scoped per user + session ID, and trimmed to the last
   `RAG_MAX_HISTORY_TURNS` turns.
@@ -135,9 +145,9 @@ many chunks are indexed.
   `topics`/`notes` MongoDB collections, and add a `userId` field to
   chunk metadata (Upstash Vector supports metadata filtering) so each
   user's chat only retrieves their own content.
-- **Streaming responses**: OpenAI's SDK supports `stream: true`; wire
-  that through a streamed `Response` in the route handler for a typing
-  effect in the widget.
+- **Streaming responses**: both Gemini's REST API and Groq's OpenAI-compatible
+  SDK support streaming; wire that through a streamed `Response` in the
+  route handler for a typing effect in the widget.
 - **Reranking**: if answers start feeling off-topic as the knowledge
   base grows, add a reranking step on top of the initial Upstash Vector
-  results before passing them to OpenAI.
+  results before passing them to the generation step.

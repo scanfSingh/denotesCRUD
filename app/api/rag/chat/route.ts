@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[api/rag/chat] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    // Config/connectivity errors (e.g. missing OPENAI_API_KEY) are more
-    // useful to the caller than a bare 500.
+    // Config/connectivity errors (e.g. missing GEMINI_API_KEY/GROQ_API_KEY)
+    // are more useful to the caller than a bare 500.
     return NextResponse.json({ error: message }, { status: 503 });
   }
 }

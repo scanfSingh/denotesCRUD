@@ -12,10 +12,20 @@ export const ragConfig = {
     token: process.env.UPSTASH_VECTOR_REST_TOKEN || "",
   },
 
-  // OpenAI (generation)
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY || "",
-    model: process.env.RAG_OPENAI_MODEL || "gpt-4o-mini",
+  // Gemini (primary generation - has a free tier)
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+    model: process.env.RAG_GEMINI_MODEL || "gemini-3.6-flash",
+    temperature: Number(process.env.RAG_LLM_TEMPERATURE ?? "0.2"),
+  },
+
+  // Groq (fallback generation - used once the Gemini free tier is
+  // exhausted, or on any Gemini quota/rate-limit error). Groq exposes an
+  // OpenAI-compatible endpoint, so we reuse the `openai` SDK for it.
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || "",
+    model: process.env.RAG_GROQ_MODEL || "openai/gpt-oss-120b",
+    baseUrl: "https://api.groq.com/openai/v1",
     temperature: Number(process.env.RAG_LLM_TEMPERATURE ?? "0.2"),
   },
 
@@ -44,7 +54,9 @@ export function assertRagConfigured() {
   const missing: string[] = [];
   if (!ragConfig.upstash.url) missing.push("UPSTASH_VECTOR_REST_URL");
   if (!ragConfig.upstash.token) missing.push("UPSTASH_VECTOR_REST_TOKEN");
-  if (!ragConfig.openai.apiKey) missing.push("OPENAI_API_KEY");
+  if (!ragConfig.gemini.apiKey && !ragConfig.groq.apiKey) {
+    missing.push("GEMINI_API_KEY (or GROQ_API_KEY)");
+  }
   if (missing.length > 0) {
     throw new Error(`RAG chat is missing required env vars: ${missing.join(", ")}`);
   }

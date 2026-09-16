@@ -18,7 +18,9 @@ export async function GET() {
     }
 
     const configured = Boolean(
-      ragConfig.upstash.url && ragConfig.upstash.token && ragConfig.openai.apiKey
+      ragConfig.upstash.url &&
+        ragConfig.upstash.token &&
+        (ragConfig.gemini.apiKey || ragConfig.groq.apiKey)
     );
 
     if (!configured) {

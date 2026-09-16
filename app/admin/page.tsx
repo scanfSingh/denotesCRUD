@@ -347,7 +347,7 @@ export default function AdminPage() {
               {ragStats && !ragStats.configured && (
                 <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
                   RAG chat isn&apos;t configured yet - set UPSTASH_VECTOR_REST_URL, UPSTASH_VECTOR_REST_TOKEN and
-                  OPENAI_API_KEY (see RAG_CHAT_SETUP.md) before ingesting content.
+                  GEMINI_API_KEY (or GROQ_API_KEY) (see RAG_CHAT_SETUP.md) before ingesting content.
                 </p>
               )}
 
