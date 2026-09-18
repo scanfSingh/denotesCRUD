@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { featureFlags } from "@/lib/featureFlags";
+import { syncMyNotesToRag } from "@/app/rag-actions";
 
 interface ChatSource {
   url: string;
@@ -25,6 +26,8 @@ export default function RagChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const sessionIdRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +86,28 @@ export default function RagChatWidget() {
     }
   }
 
+  async function syncMyNotes() {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncStatus(null);
+    try {
+      const result = await syncMyNotesToRag();
+      if (result.success) {
+        setSyncStatus(
+          result.summary.chunksStored > 0
+            ? `Indexed ${result.summary.requested} note${result.summary.requested === 1 ? "" : "s"}/topic${result.summary.requested === 1 ? "" : "s"} for chat.`
+            : "No notes or topics to index yet."
+        );
+      } else {
+        setSyncStatus(result.error);
+      }
+    } catch (err) {
+      setSyncStatus(err instanceof Error ? err.message : "Failed to sync your notes");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function resetChat() {
     setMessages([]);
     setError(null);
@@ -108,6 +133,16 @@ export default function RagChatWidget() {
             </div>
             <div className="flex items-center gap-1">
               <button
+                onClick={syncMyNotes}
+                disabled={syncing}
+                title="Index my notes & topics so chat can answer from them"
+                className="rounded p-1.5 text-purple-100 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.5 9a7 7 0 0112.6-2.6M18.5 15a7 7 0 01-12.6 2.6" />
+                </svg>
+              </button>
+              <button
                 onClick={resetChat}
                 title="Start a new conversation"
                 className="rounded p-1.5 text-purple-100 hover:bg-white/10 hover:text-white"
@@ -128,10 +163,17 @@ export default function RagChatWidget() {
             </div>
           </div>
 
+          {(syncing || syncStatus) && (
+            <div className="border-b border-gray-200 bg-purple-50 px-4 py-1.5 text-xs text-purple-700 dark:border-gray-700 dark:bg-gray-700/50 dark:text-purple-300">
+              {syncing ? "Indexing your notes & topics…" : syncStatus}
+            </div>
+          )}
+
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Ask me anything about denotes &mdash; features, how topics work, or getting started.
+                Ask me anything about denotes, or about your own notes and topics. Tap the sync icon
+                above first so I can index them.
               </p>
             )}
             {messages.map((m, i) => (

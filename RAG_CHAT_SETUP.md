@@ -2,8 +2,9 @@
 
 This guide explains how to configure the AI chat assistant feature -
 a Retrieval-Augmented Generation (RAG) chatbot embedded in the app that
-answers questions grounded in content you ingest (docs, blog posts,
-public topic pages).
+answers questions grounded in content you ingest: a shared/public
+knowledge base (docs, blog posts, public topic pages) *and*, per user,
+their own notes and topics (see Step 7) - fully isolated per user.
 
 Unlike a locally-run version, this implementation is fully serverless
 and deploys on Vercel: Gemini handles generation (falling back to Groq
@@ -14,13 +15,16 @@ process required).
 ## How it works
 
 ```
-   URLs (docs/blog/topics) ──▶ lib/rag/loader.ts + chunker.ts ──▶ chunks
-                                                                     │
-                                                                     ▼
-                                                        Upstash Vector index
-                                                     (embeds text automatically)
-                                                                     ▲
-                                                                     │ similarity search
+   URLs (docs/blog/topics) ──▶ lib/rag/loader.ts ─────┐
+   your notes/topics (Mongo) ──▶ lib/rag/notesLoader.ts┤──▶ chunker.ts ──▶ chunks
+                                                        │
+                                                        ▼
+                                        Upstash Vector index, namespaced:
+                                       default = public, user:<id> = personal
+                                     (embeds text automatically per namespace)
+                                                        ▲
+                                                        │ similarity search, both
+                                                        │ namespaces merged by score
    user question ──▶ app/api/rag/chat/route.ts ──▶ lib/rag/pipeline.ts
                                                                      │
                                                                      ▼
@@ -121,6 +125,39 @@ Check `GET /api/rag/health` (admin-only - see `ADMIN_EMAILS` in
 `app/actions.ts`) to confirm the vector store is configured and see how
 many chunks are indexed.
 
+## Step 7: Personal RAG - chatting over your own notes
+
+Beyond the shared/public knowledge base above, any logged-in user can
+index their own notes and topics so the chat widget can answer
+questions grounded in their own content - not just the public docs.
+
+This is on by default (no extra env vars) once the base setup above is
+done. In the chat widget, click the sync icon (circular arrows, next to
+the "new conversation" icon) to index your notes/topics - it calls the
+`syncMyNotesToRag` server action (`app/rag-actions.ts`), which:
+
+1. Reads your own `notes` and `topics` documents from MongoDB
+   (`lib/rag/notesLoader.ts`) - note content is stored as TipTap HTML,
+   stripped to plain text with `htmlToPlainText()` (`lib/rag/loader.ts`)
+2. Chunks them the same way as public pages (`lib/rag/chunker.ts`)
+3. Stores them in **your own Upstash Vector namespace**
+   (`user:<your-user-id>`, see `lib/rag/vectorStore.ts`) - fully
+   isolated from every other user's notes and from the shared/public
+   namespace
+
+Each chat turn (`lib/rag/pipeline.ts`) then retrieves from *both* the
+public namespace and your personal namespace via `retrieveForUser()`,
+merges the results by relevance score, and answers from whichever mix
+is most relevant. Other users can never see your notes, and you can
+never see theirs - namespaces don't overlap.
+
+It's a full re-index each time you sync (not incremental) - simplest
+correct option for typical personal note volumes (tens to low
+hundreds of notes/topics per user, no pagination in this app). Re-sync
+any time after editing/adding/deleting notes to keep chat answers
+current; there's no automatic re-index on save yet (see "Extending
+this" below).
+
 ## Notes on deploying to Vercel
 
 - Both `/api/rag/ingest` and `/api/rag/chat` run on the **Node.js
@@ -140,11 +177,13 @@ many chunks are indexed.
 
 ## Extending this
 
-- **Index your own notes/topics, not just public pages**: write an
-  alternative to `lib/rag/loader.ts` that reads directly from your
-  `topics`/`notes` MongoDB collections, and add a `userId` field to
-  chunk metadata (Upstash Vector supports metadata filtering) so each
-  user's chat only retrieves their own content.
+- **Auto re-index on save**: call `ingestUserContent(userId)`
+  (`lib/rag/ingest.ts`) from the end of `createNote`/`updateNote`/
+  `deleteNote`/`createTopic`/`updateTopic`/`deleteTopic`
+  (`app/actions.ts`) instead of requiring a manual sync click - wrap in
+  try/catch so a RAG hiccup never blocks saving a note. Worth
+  debouncing/batching if users edit frequently, since it's a full
+  re-index per call today.
 - **Streaming responses**: both Gemini's REST API and Groq's OpenAI-compatible
   SDK support streaming; wire that through a streamed `Response` in the
   route handler for a typing effect in the widget.

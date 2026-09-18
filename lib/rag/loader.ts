@@ -103,3 +103,16 @@ function cleanText(raw: string): string {
     .filter(Boolean)
     .join("\n");
 }
+
+/**
+ * Strips an HTML fragment down to clean, plain text using the same
+ * block-aware extraction as fetchUrl(). Used to turn note/topic content
+ * (stored as TipTap-generated HTML, see lib/rag/notesLoader.ts) into
+ * text suitable for chunking - no fetching involved, just parsing.
+ */
+export function htmlToPlainText(html: string): string {
+  if (!html || !html.trim()) return "";
+  const $ = cheerio.load(html);
+  NOISE_SELECTORS.forEach((sel) => $(sel).remove());
+  return cleanText(extractBlockText($, $("body")));
+}

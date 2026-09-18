@@ -2,7 +2,7 @@
  * Orchestrates a single chat turn: retrieve -> generate -> record
  * history. This is the one function the API route calls.
  */
-import { retrieve } from "./vectorStore";
+import { retrieveForUser } from "./vectorStore";
 import { generateAnswer } from "./generator";
 import { getHistory, appendTurn } from "./history";
 
@@ -18,7 +18,10 @@ export interface ChatResult {
 }
 
 export async function chat(userId: string, sessionId: string, question: string): Promise<ChatResult> {
-  const chunks = await retrieve(question);
+  // Retrieves from the shared/public knowledge base AND this user's own
+  // notes/topics (their personal Upstash Vector namespace) - see
+  // vectorStore.ts. Other users' notes are never included.
+  const chunks = await retrieveForUser(question, userId);
   const history = await getHistory(userId, sessionId);
 
   let answer: string;

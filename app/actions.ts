@@ -9,7 +9,9 @@ import crypto from "crypto";
 import { sendPasswordResetEmail, sendTopicSharedEmail, sendFriendRequestEmail, sendTaskAssignedEmail, sendVerificationEmail } from "@/lib/email";
 
 // Helper function to get current user ID
-async function getCurrentUserId(): Promise<string | null> {
+// Exported so other server-only modules (e.g. lib/rag/*) can reuse the
+// same auth() lookup instead of duplicating it.
+export async function getCurrentUserId(): Promise<string | null> {
   try {
     const session = await auth();
     if (!session) {
