@@ -2,22 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { useFeatureFlags } from "./FeatureFlagsProvider";
-import { syncMyNotesToRag } from "@/app/rag-actions";
-
-interface ChatSource {
-  url: string;
-  title: string;
-  score: number;
-}
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-  sources?: ChatSource[];
-}
-
-const SESSION_STORAGE_KEY = "denotes-rag-session-id";
+import { useRagChat } from "@/lib/useRagChat";
 
 /** Other components (e.g. the home screen's "Ask AI" tiles) can open
  * this widget without any shared state by dispatching this event. */
@@ -25,35 +12,23 @@ export const OPEN_RAG_CHAT_EVENT = "denotes:open-rag-chat";
 
 export default function RagChatWidget() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  // Fed from MongoDB (via the root layout + FeatureFlagsProvider), so
-  // this reflects the admin dashboard's current value with no client
-  // round trip needed.
+  // Fed from MongoDB via the root layout + FeatureFlagsProvider.
   const { ragChat } = useFeatureFlags();
-  const sessionIdRef = useRef<string>("");
+  const {
+    messages,
+    input,
+    setInput,
+    loading,
+    error,
+    syncing,
+    syncStatus,
+    sendMessage,
+    syncMyNotes,
+    resetChat,
+  } = useRagChat();
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      let sid = window.localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!sid) {
-        sid = crypto.randomUUID();
-        window.localStorage.setItem(SESSION_STORAGE_KEY, sid);
-      }
-      sessionIdRef.current = sid;
-    } catch {
-      // localStorage can throw in private browsing / disabled storage;
-      // fall back to an in-memory session id for this page load.
-      sessionIdRef.current = crypto.randomUUID();
-    }
-  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -67,74 +42,11 @@ export default function RagChatWidget() {
 
   if (!ragChat.enabled) return null;
   if (status !== "authenticated" || !session) return null;
-
-  async function sendMessage() {
-    const question = input.trim();
-    if (!question || loading) return;
-
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
-    setInput("");
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/rag/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: question, sessionId: sessionIdRef.current }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Something went wrong");
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.answer, sources: data.sources },
-      ]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function syncMyNotes() {
-    if (syncing) return;
-    setSyncing(true);
-    setSyncStatus(null);
-    try {
-      const result = await syncMyNotesToRag();
-      if (result.success) {
-        setSyncStatus(
-          result.summary.chunksStored > 0
-            ? `Indexed ${result.summary.requested} note${result.summary.requested === 1 ? "" : "s"}/topic${result.summary.requested === 1 ? "" : "s"} for chat.`
-            : "No notes or topics to index yet."
-        );
-      } else {
-        setSyncStatus(result.error);
-      }
-    } catch (err) {
-      setSyncStatus(err instanceof Error ? err.message : "Failed to sync your notes");
-    } finally {
-      setSyncing(false);
-    }
-  }
-
-  async function resetChat() {
-    setMessages([]);
-    setError(null);
-    try {
-      await fetch("/api/rag/chat/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: sessionIdRef.current }),
-      });
-    } catch {
-      // Non-critical - the UI has already cleared locally.
-    }
-  }
+  // On the home page the assistant takes main stage as a large embedded
+  // panel (see RagChatMainStage) instead of this floating messenger -
+  // showing both at once would be redundant. Everywhere else, this
+  // floating bubble is how the assistant appears.
+  if (pathname === "/") return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">

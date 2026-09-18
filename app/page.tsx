@@ -6,13 +6,7 @@ import { useEffect, useState } from "react";
 import { testDatabaseConnection, getSharedTopics, getPublishedBlogPosts, type SharedTopic, type Topic, type BlogPost } from "./actions";
 import Navigation from "./components/Navigation";
 import { useFeatureFlags } from "./components/FeatureFlagsProvider";
-import { OPEN_RAG_CHAT_EVENT } from "./components/RagChatWidget";
-
-function openAiAssistant() {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent(OPEN_RAG_CHAT_EVENT));
-  }
-}
+import RagChatMainStage from "./components/RagChatMainStage";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -390,6 +384,9 @@ export default function Home() {
         {/* Main Content */}
         {status === "authenticated" ? (
           <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            {/* AI Assistant - takes main stage on the home screen */}
+            {ragChatEnabled && <RagChatMainStage />}
+
             {/* Bento: welcome + stats row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
               <div className="lg:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
@@ -501,14 +498,11 @@ export default function Home() {
             )}
 
             {/* Quick actions bento */}
-            <div className={`mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4 ${ragChatEnabled ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+            <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { href: "/crud", onClick: undefined, title: "Tasks", desc: "Manage tasks", icon: "✓", accent: false },
                 { href: "/topics", onClick: undefined, title: "Topics", desc: "Organize topics", icon: "📝", accent: false },
                 { href: "/topics-view", onClick: undefined, title: "View", desc: "Browse knowledge", icon: "👁", accent: false },
-                ...(ragChatEnabled
-                  ? [{ href: undefined, onClick: openAiAssistant, title: "Ask AI", desc: "Chat with your notes", icon: "✨", accent: true }]
-                  : []),
               ].map((action, i) => {
                 const content = (
                   <>
