@@ -15,6 +15,12 @@ import {
   adminResetRagKnowledgeBase,
   type RagAdminStats,
 } from "../rag-actions";
+import {
+  getFeatureFlagDashboard,
+  setFeatureFlagOverride,
+  clearFeatureFlagOverride,
+  type FeatureFlagRow,
+} from "../feature-flags-actions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 
@@ -44,6 +50,12 @@ export default function AdminPage() {
   const [ragConfirmReset, setRagConfirmReset] = useState(false);
   const [ragLastFailedUrls, setRagLastFailedUrls] = useState<string[]>([]);
 
+  // Feature Flags state
+  const [flagRows, setFlagRows] = useState<FeatureFlagRow[]>([]);
+  const [flagsLoading, setFlagsLoading] = useState(true);
+  const [flagsError, setFlagsError] = useState<string | null>(null);
+  const [flagPending, setFlagPending] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     checkAdminAndLoad();
   }, []);
@@ -70,6 +82,7 @@ export default function AdminPage() {
       // Loaded separately so a RAG misconfiguration doesn't block the
       // rest of the admin dashboard from loading.
       loadRagStats();
+      loadFeatureFlags();
     } catch (err) {
       console.error("Error loading admin data:", err);
       setError("Failed to load admin data");
@@ -144,6 +157,76 @@ export default function AdminPage() {
       setRagResetting(false);
     }
   };
+
+  const loadFeatureFlags = async () => {
+    setFlagsLoading(true);
+    try {
+      const result = await getFeatureFlagDashboard();
+      if (result.success) {
+        setFlagRows(result.flags);
+        setFlagsError(null);
+      } else {
+        setFlagsError(result.error);
+      }
+    } catch (err) {
+      console.error("Error loading feature flags:", err);
+      setFlagsError("Failed to load feature flags");
+    } finally {
+      setFlagsLoading(false);
+    }
+  };
+
+  const handleToggleFlag = async (row: FeatureFlagRow) => {
+    const nextValue = !row.effective;
+    setFlagPending((prev) => ({ ...prev, [row.path]: true }));
+    // Optimistic update so the switch responds immediately.
+    setFlagRows((prev) =>
+      prev.map((r) => (r.path === row.path ? { ...r, override: nextValue, effective: nextValue } : r))
+    );
+
+    try {
+      const result = await setFeatureFlagOverride(row.path, nextValue);
+      if (!result.success) {
+        setFlagsError(result.error);
+        // Revert on failure.
+        setFlagRows((prev) =>
+          prev.map((r) => (r.path === row.path ? { ...r, override: row.override, effective: row.effective } : r))
+        );
+      }
+    } finally {
+      setFlagPending((prev) => {
+        const next = { ...prev };
+        delete next[row.path];
+        return next;
+      });
+    }
+  };
+
+  const handleResetFlag = async (row: FeatureFlagRow) => {
+    setFlagPending((prev) => ({ ...prev, [row.path]: true }));
+    try {
+      const result = await clearFeatureFlagOverride(row.path);
+      if (result.success) {
+        setFlagRows((prev) =>
+          prev.map((r) => (r.path === row.path ? { ...r, override: null, effective: row.envDefault } : r))
+        );
+      } else {
+        setFlagsError(result.error);
+      }
+    } finally {
+      setFlagPending((prev) => {
+        const next = { ...prev };
+        delete next[row.path];
+        return next;
+      });
+    }
+  };
+
+  const flagsByCategory = flagRows.reduce((acc, row) => {
+    if (!acc[row.category]) acc[row.category] = [];
+    acc[row.category].push(row);
+    return acc;
+  }, {} as Record<string, FeatureFlagRow[]>);
 
   const handleToggleAdmin = async (userId: string) => {
     setError(null);
@@ -404,6 +487,93 @@ export default function AdminPage() {
                     : "Reset Knowledge Base"}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Feature Flags Section */}
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl mb-8">
+            <div className="p-6 border-b border-slate-700/50">
+              <div>
+                <h2 className="text-2xl font-semibold text-white">Feature Flags</h2>
+                <p className="text-slate-400 text-sm mt-1">
+                  Toggle features on or off instantly, without a redeploy. Overrides are saved in the
+                  database and take priority over the environment-variable defaults.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {flagsError && (
+                <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                  {flagsError}
+                </p>
+              )}
+
+              {flagsLoading ? (
+                <p className="text-sm text-slate-400">Loading feature flags...</p>
+              ) : flagRows.length === 0 ? (
+                <p className="text-sm text-slate-400">No toggleable flags found.</p>
+              ) : (
+                Object.entries(flagsByCategory).map(([category, rows]) => (
+                  <div key={category}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                      {category.replace(/([a-z0-9])([A-Z])/g, "$1 $2")}
+                    </h3>
+                    <div className="divide-y divide-slate-700/50 rounded-xl border border-slate-700/50 overflow-hidden">
+                      {rows.map((row) => {
+                        const pending = Boolean(flagPending[row.path]);
+                        return (
+                          <div
+                            key={row.path}
+                            className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-900/30"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white">{row.label}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs text-slate-500 font-mono truncate">{row.path}</span>
+                                {row.override !== null && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                                    Overridden
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                              {row.override !== null && (
+                                <button
+                                  onClick={() => handleResetFlag(row)}
+                                  disabled={pending}
+                                  title={`Reset to environment default (${row.envDefault ? "on" : "off"})`}
+                                  className="text-xs text-slate-400 hover:text-white underline disabled:opacity-50"
+                                >
+                                  Reset
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleToggleFlag(row)}
+                                disabled={pending}
+                                role="switch"
+                                aria-checked={row.effective}
+                                aria-label={`Toggle ${row.label}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                                  row.effective ? "bg-purple-500" : "bg-slate-600"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    row.effective ? "translate-x-6" : "translate-x-1"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

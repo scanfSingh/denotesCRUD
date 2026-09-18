@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { featureFlags } from "@/lib/featureFlags";
 import { syncMyNotesToRag } from "@/app/rag-actions";
+import { getEffectiveFlag } from "@/app/feature-flags-actions";
 
 interface ChatSource {
   url: string;
@@ -19,6 +20,10 @@ interface ChatMessage {
 
 const SESSION_STORAGE_KEY = "denotes-rag-session-id";
 
+/** Other components (e.g. the home screen's "Ask AI" tiles) can open
+ * this widget without any shared state by dispatching this event. */
+export const OPEN_RAG_CHAT_EVENT = "denotes:open-rag-chat";
+
 export default function RagChatWidget() {
   const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +33,10 @@ export default function RagChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  // Starts from the build-time env default (avoids waiting on a round
+  // trip for the common case), then reconciles with any admin override
+  // saved in Mongo - see app/feature-flags-actions.ts.
+  const [ragChatEnabled, setRagChatEnabled] = useState(featureFlags.ragChat.enabled);
   const sessionIdRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,7 +60,21 @@ export default function RagChatWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  if (!featureFlags.ragChat.enabled) return null;
+  useEffect(() => {
+    const openWidget = () => setIsOpen(true);
+    window.addEventListener(OPEN_RAG_CHAT_EVENT, openWidget);
+    return () => window.removeEventListener(OPEN_RAG_CHAT_EVENT, openWidget);
+  }, []);
+
+  useEffect(() => {
+    getEffectiveFlag("ragChat.enabled")
+      .then(setRagChatEnabled)
+      .catch(() => {
+        // Keep the env-default value already in state on failure.
+      });
+  }, []);
+
+  if (!ragChatEnabled) return null;
   if (status !== "authenticated" || !session) return null;
 
   async function sendMessage() {

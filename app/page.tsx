@@ -5,6 +5,15 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { testDatabaseConnection, getSharedTopics, getPublishedBlogPosts, type SharedTopic, type Topic, type BlogPost } from "./actions";
 import Navigation from "./components/Navigation";
+import { featureFlags } from "@/lib/featureFlags";
+import { getEffectiveFlag } from "./feature-flags-actions";
+import { OPEN_RAG_CHAT_EVENT } from "./components/RagChatWidget";
+
+function openAiAssistant() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(OPEN_RAG_CHAT_EVENT));
+  }
+}
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -15,6 +24,15 @@ export default function Home() {
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loadingBlogs, setLoadingBlogs] = useState(false);
+  // Env default first, reconciled with any admin override shortly
+  // after mount - see app/feature-flags-actions.ts.
+  const [ragChatEnabled, setRagChatEnabled] = useState(featureFlags.ragChat.enabled);
+
+  useEffect(() => {
+    getEffectiveFlag("ragChat.enabled")
+      .then(setRagChatEnabled)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function checkConnection() {
@@ -140,6 +158,22 @@ export default function Home() {
 
   // Features data for landing page
   const features = [
+    ...(ragChatEnabled
+      ? [
+          {
+            icon: (
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.17 0-2.29-.196-3.312-.552L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            ),
+            title: "AI Assistant",
+            description: "Chat with an AI that's grounded in denotes' help content and, once synced, your own notes and topics.",
+            color: "from-purple-500 to-indigo-500",
+            bg: "bg-purple-500/10",
+            text: "text-purple-400",
+          },
+        ]
+      : []),
     {
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,6 +184,7 @@ export default function Home() {
       description: "Organize, prioritize, and track your tasks with an intuitive interface. Never miss a deadline again.",
       color: "from-blue-500 to-cyan-500",
       bg: "bg-blue-500/10",
+      text: "text-blue-400",
     },
     {
       icon: (
@@ -161,6 +196,7 @@ export default function Home() {
       description: "Build a hierarchical knowledge base with nested topics and rich descriptions. Your ideas, structured.",
       color: "from-violet-500 to-purple-500",
       bg: "bg-violet-500/10",
+      text: "text-blue-400",
     },
     {
       icon: (
@@ -172,6 +208,7 @@ export default function Home() {
       description: "Share your knowledge with friends and colleagues. Learn from shared insights and grow together.",
       color: "from-fuchsia-500 to-pink-500",
       bg: "bg-fuchsia-500/10",
+      text: "text-blue-400",
     },
     {
       icon: (
@@ -183,6 +220,7 @@ export default function Home() {
       description: "Connect related topics and tasks. Create a web of knowledge that grows with your ideas.",
       color: "from-amber-500 to-orange-500",
       bg: "bg-amber-500/10",
+      text: "text-blue-400",
     },
     {
       icon: (
@@ -194,6 +232,7 @@ export default function Home() {
       description: "Add formatted text, images, and more to your notes. Express your ideas without limitations.",
       color: "from-blue-500 to-indigo-500",
       bg: "bg-blue-500/10",
+      text: "text-blue-400",
     },
     {
       icon: (
@@ -205,6 +244,7 @@ export default function Home() {
       description: "Your data is protected with enterprise-grade security. Your notes stay private, always.",
       color: "from-rose-500 to-red-500",
       bg: "bg-rose-500/10",
+      text: "text-blue-400",
     },
   ];
 
@@ -231,7 +271,7 @@ export default function Home() {
           <header className="relative z-10">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-14 sm:pb-18">
               <div className="flex flex-col items-center text-center">
-                <div className="flex items-center gap-3 mb-8">
+                <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
                   {loading ? (
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] text-slate-400 text-xs font-medium">
                       <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse" />
@@ -248,6 +288,14 @@ export default function Home() {
                       Connection failed
                     </span>
                   )}
+                  {ragChatEnabled && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-300 text-xs font-medium border border-purple-500/20">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      New: AI Assistant
+                    </span>
+                  )}
                 </div>
 
                 <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight mb-5">
@@ -259,7 +307,9 @@ export default function Home() {
                   Notes, tasks, and knowledge — in one place.
                 </p>
                 <p className="text-sm text-slate-500 max-w-md mx-auto mb-10">
-                  Organize, collaborate, and build your personal knowledge base.
+                  {ragChatEnabled
+                    ? "Organize, collaborate, and chat with an AI assistant that knows your notes."
+                    : "Organize, collaborate, and build your personal knowledge base."}
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-3">
@@ -286,6 +336,62 @@ export default function Home() {
               </div>
             </div>
           </header>
+        )}
+
+        {/* AI Assistant showcase - guests only */}
+        {status !== "authenticated" && ragChatEnabled && (
+          <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+            <div className="grid lg:grid-cols-2 gap-8 items-center rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.07] via-white/[0.03] to-transparent p-6 sm:p-8">
+              <div>
+                <p className="text-purple-300 font-medium text-xs uppercase tracking-wider mb-3">AI Assistant</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+                  Ask questions. Get answers grounded in your own notes.
+                </h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-5">
+                  denotes' built-in AI assistant answers from denotes' own help content — and, once you
+                  sync them, from your own notes and topics too. Nothing you write is ever visible to
+                  other users' chats.
+                </p>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-colors"
+                >
+                  Try it — sign in
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+              </div>
+
+              {/* Static mock conversation - illustrative only */}
+              <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-slate-900 shadow-2xl">
+                <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3">
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white/15">
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.17 0-2.29-.196-3.312-.552L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-white">denotes Assistant</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex justify-end">
+                    <div className="max-w-[85%] rounded-lg bg-purple-600 px-3 py-2 text-sm text-white">
+                      What did I note about the Q3 roadmap?
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-lg bg-white/[0.06] px-3 py-2 text-sm text-slate-200">
+                      Your "Q3 Planning" note lists three priorities: mobile redesign, billing migration,
+                      and the new onboarding flow. The billing migration is flagged as highest risk.
+                      <div className="mt-2 border-t border-white/10 pt-2 text-xs text-purple-300">
+                        Q3 Planning
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Main Content */}
@@ -402,30 +508,57 @@ export default function Home() {
             )}
 
             {/* Quick actions bento */}
-            <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className={`mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4 ${ragChatEnabled ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
               {[
-                { href: "/crud", title: "Tasks", desc: "Manage tasks", icon: "✓" },
-                { href: "/topics", title: "Topics", desc: "Organize topics", icon: "📝" },
-                { href: "/topics-view", title: "View", desc: "Browse knowledge", icon: "👁" },
-              ].map((action, i) => (
-                <Link
-                  key={i}
-                  href={action.href}
-                  className="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-blue-500/30 hover:bg-white/[0.06] transition-all"
-                >
-                  <span className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg font-medium group-hover:bg-blue-500/20 transition-colors">
-                    {action.icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-white">{action.title}</h3>
-                    <p className="text-xs text-slate-500">{action.desc}</p>
-                  </div>
-                  <svg className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              ))}
+                { href: "/crud", onClick: undefined, title: "Tasks", desc: "Manage tasks", icon: "✓", accent: false },
+                { href: "/topics", onClick: undefined, title: "Topics", desc: "Organize topics", icon: "📝", accent: false },
+                { href: "/topics-view", onClick: undefined, title: "View", desc: "Browse knowledge", icon: "👁", accent: false },
+                ...(ragChatEnabled
+                  ? [{ href: undefined, onClick: openAiAssistant, title: "Ask AI", desc: "Chat with your notes", icon: "✨", accent: true }]
+                  : []),
+              ].map((action, i) => {
+                const content = (
+                  <>
+                    <span
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-medium transition-colors ${
+                        action.accent
+                          ? "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20"
+                          : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20"
+                      }`}
+                    >
+                      {action.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-white">{action.title}</h3>
+                      <p className="text-xs text-slate-500">{action.desc}</p>
+                    </div>
+                    <svg className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </>
+                );
+                const className = `group flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border transition-all text-left w-full ${
+                  action.accent
+                    ? "border-purple-500/20 hover:border-purple-500/40 hover:bg-white/[0.06]"
+                    : "border-white/[0.08] hover:border-blue-500/30 hover:bg-white/[0.06]"
+                }`;
+
+                return action.href ? (
+                  <Link key={i} href={action.href} className={className}>
+                    {content}
+                  </Link>
+                ) : (
+                  <button key={i} type="button" onClick={action.onClick} className={className}>
+                    {content}
+                  </button>
+                );
+              })}
             </div>
+            {ragChatEnabled && (
+              <p className="mt-3 text-xs text-slate-500">
+                Tip: open the AI assistant and tap the sync icon to index your notes so it can answer from them.
+              </p>
+            )}
           </main>
         ) : (
           /* Features for guests */
@@ -446,7 +579,7 @@ export default function Home() {
                   key={index}
                   className="group p-6 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-blue-500/20 transition-all"
                 >
-                  <div className={`w-12 h-12 rounded-lg ${feature.bg} flex items-center justify-center mb-4 text-blue-400`}>
+                  <div className={`w-12 h-12 rounded-lg ${feature.bg} flex items-center justify-center mb-4 ${feature.text || "text-blue-400"}`}>
                     {feature.icon}
                   </div>
                   <h3 className="font-semibold text-white mb-2">{feature.title}</h3>

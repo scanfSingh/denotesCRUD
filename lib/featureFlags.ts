@@ -151,3 +151,68 @@ export function useFeatureFlag(
   return isFeatureEnabled(category, feature);
 }
 
+// ---------------------------------------------------------------------
+// Runtime overrides (admin dashboard)
+// ---------------------------------------------------------------------
+//
+// Everything below is pure (no I/O), so it's safe to import from both
+// server and client code. The actual override values live in Mongo
+// (see lib/featureFlagOverrides.ts) and are only ever read/written
+// from server actions (see app/feature-flags-actions.ts).
+
+/** Categories intentionally left out of the runtime-toggleable
+ * dashboard. Auth methods stay env-only so an admin can never
+ * accidentally lock everyone - including themselves - out of login by
+ * flipping a switch in the UI. */
+const NON_TOGGLEABLE_CATEGORIES: (keyof FeatureFlags)[] = ["auth"];
+
+export interface FeatureFlagEntry {
+  /** Dot path used as the override key, e.g. "ragChat.enabled". */
+  path: string;
+  category: string;
+  key: string;
+  /** Human-readable label derived from the key, e.g. "Enabled". */
+  label: string;
+  envDefault: boolean;
+}
+
+function humanizeFlagKey(key: string): string {
+  const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** Flat list of every boolean flag eligible for the admin dashboard,
+ * derived from the static `featureFlags` object above so it can never
+ * drift out of sync with new flags added there. */
+export function listToggleableFlags(): FeatureFlagEntry[] {
+  const entries: FeatureFlagEntry[] = [];
+  for (const [category, group] of Object.entries(featureFlags)) {
+    if (NON_TOGGLEABLE_CATEGORIES.includes(category as keyof FeatureFlags)) continue;
+    for (const [key, value] of Object.entries(group as Record<string, unknown>)) {
+      if (typeof value !== "boolean") continue;
+      entries.push({
+        path: `${category}.${key}`,
+        category,
+        key,
+        label: humanizeFlagKey(key),
+        envDefault: value,
+      });
+    }
+  }
+  return entries;
+}
+
+/** Reads a single dot-path boolean straight out of the static
+ * `featureFlags` object, e.g. getStaticFlag("ragChat.enabled"). */
+export function getStaticFlag(path: string): boolean {
+  const [category, key] = path.split(".");
+  const group = (featureFlags as unknown as Record<string, Record<string, unknown>>)[category];
+  return Boolean(group?.[key]);
+}
+
+/** Applies a DB override on top of the env-var default for one flag,
+ * without mutating the static featureFlags object. */
+export function resolveFlag(path: string, overrides: Record<string, boolean>): boolean {
+  return path in overrides ? overrides[path] : getStaticFlag(path);
+}
+
