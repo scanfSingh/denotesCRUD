@@ -142,9 +142,21 @@ export async function retrieveForUser(
 }
 
 export async function vectorStoreStats(namespace?: string) {
-  const index = scopedIndex(namespace);
-  const info = await index.info();
-  return { vectorCount: info.vectorCount, pendingVectorCount: info.pendingVectorCount };
+  // Namespace-scoped index objects (Index.namespace(ns)) don't expose
+  // info()/describe() - only the base index does, returning a
+  // `namespaces` breakdown alongside the index-wide totals. So we
+  // always call info() on the base index and pick out the right slice.
+  const info = await getVectorIndex().info();
+
+  if (!namespace) {
+    return { vectorCount: info.vectorCount, pendingVectorCount: info.pendingVectorCount };
+  }
+
+  const nsInfo = info.namespaces?.[namespace];
+  return {
+    vectorCount: nsInfo?.vectorCount ?? 0,
+    pendingVectorCount: nsInfo?.pendingVectorCount ?? 0,
+  };
 }
 
 /**
