@@ -63,6 +63,20 @@ export default function Home() {
 
   const allSharedTopics = sharedTopics.flatMap((st) => st.topics || []);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 5) return "Still up";
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -106,10 +120,10 @@ export default function Home() {
       <div
         key={topic._id}
         onClick={() => setSelectedTopic(isSelected ? null : topic)}
-        className={`group rounded-xl border transition-all cursor-pointer overflow-hidden ${
+        className={`group rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden ${
           isSelected
             ? "border-blue-500/60 bg-white/[0.06] shadow-lg shadow-blue-500/10"
-            : "border-white/[0.08] bg-white/[0.04] hover:border-blue-500/30 hover:bg-white/[0.06]"
+            : "border-white/[0.08] bg-white/[0.04] hover:border-blue-500/30 hover:bg-white/[0.06] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20"
         }`}
       >
         <div className="p-4">
@@ -384,168 +398,201 @@ export default function Home() {
         {/* Main Content */}
         {status === "authenticated" ? (
           <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            {/* AI Assistant - takes main stage on the home screen */}
-            {ragChatEnabled && <RagChatMainStage />}
+            {/* Greeting */}
+            <div className="mb-6">
+              <p className="text-xs text-slate-500 mb-0.5">{todayLabel}</p>
+              <h2 className="text-xl font-bold text-white leading-tight">
+                {getGreeting()}{session?.user?.name ? `, ${session.user.name.split(" ")[0]}` : ""}
+              </h2>
+            </div>
 
-            {/* Bento: welcome + stats row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-              <div className="lg:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                    <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">
-                      Hi{session?.user?.name ? `, ${session.user.name.split(" ")[0]}` : ""}
-                    </h2>
-                    <p className="text-sm text-slate-400">Shared topics from your network</p>
-                  </div>
+            {/* Nav stays on top - everything below is a 3-column layout:
+                quick actions | assistant + shared feed | overview & contributors */}
+            <div className="grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)_240px] gap-6">
+              {/* Left: quick actions */}
+              <div className="order-2 lg:order-1">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Quick actions</p>
+                <div className="flex flex-col gap-3">
+                  {[
+                    {
+                      href: "/crud",
+                      title: "Tasks",
+                      icon: (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      href: "/topics",
+                      title: "Topics",
+                      icon: (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      href: "/topics-view",
+                      title: "View",
+                      icon: (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      ),
+                    },
+                  ].map((action) => (
+                    <Link
+                      key={action.href}
+                      href={action.href}
+                      className="group flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] transition-all duration-200 hover:border-blue-500/30 hover:bg-white/[0.06] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20"
+                    >
+                      <span className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors shrink-0">
+                        {action.icon}
+                      </span>
+                      <span className="text-sm font-medium text-white">{action.title}</span>
+                    </Link>
+                  ))}
                 </div>
+                {ragChatEnabled && (
+                  <p className="mt-4 text-[11px] text-slate-500 leading-relaxed">
+                    Tip: the assistant already knows your notes and topics - kept in sync automatically as you save.
+                  </p>
+                )}
+              </div>
+
+              {/* Center: AI Assistant (main stage) + recent shared topics */}
+              <div className="order-1 lg:order-2 min-w-0">
+                {ragChatEnabled && <RagChatMainStage />}
+
+                {loadingShared ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.04] animate-pulse">
+                        <div className="h-5 w-24 rounded bg-white/[0.06] mb-3" />
+                        <div className="h-4 w-full rounded bg-white/[0.06] mb-2" />
+                        <div className="h-4 w-2/3 rounded bg-white/[0.06] mb-4" />
+                        <div className="h-3 w-16 rounded bg-white/[0.06]" />
+                      </div>
+                    ))}
+                  </div>
+                ) : sharedTopics.length === 0 ? (
+                  <div className="text-center py-16 px-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">No shared topics yet</h3>
+                    <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">
+                      When friends share topics with you, they’ll show up here.
+                    </p>
+                    <Link
+                      href="/friends"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                      Find friends
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Recent shared</p>
+                      {allSharedTopics.length > 6 && (
+                        <Link href="/shared-topics" className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                          View all {allSharedTopics.length}
+                        </Link>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {allSharedTopics.slice(0, 6).map((topic, index) => renderTopicCard(topic, index))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Right: overview stats + contributors */}
+              <div className="order-3 lg:order-3">
+                {sharedTopics.length > 0 && (
+                  <>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Overview</p>
+                    <div className="flex flex-col gap-3 mb-6">
+                      {[
+                        {
+                          label: "Shared",
+                          value: allSharedTopics.length,
+                          bg: "bg-blue-500/10",
+                          text: "text-blue-400",
+                          icon: (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                          ),
+                        },
+                        {
+                          label: "People",
+                          value: Object.keys(groupedBySharer).length,
+                          bg: "bg-indigo-500/10",
+                          text: "text-indigo-400",
+                          icon: (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          ),
+                        },
+                      ].map((stat, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] transition-colors hover:border-white/[0.12]"
+                        >
+                          <div className={`w-9 h-9 rounded-md ${stat.bg} ${stat.text} flex items-center justify-center shrink-0`}>
+                            {stat.icon}
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-white tabular-nums leading-none">{stat.value}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{stat.label}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {Object.keys(groupedBySharer).length > 0 && (
+                  <>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Contributors</p>
+                    <div className="flex flex-col gap-2 mb-6">
+                      {Object.entries(groupedBySharer).map(([sharerId, data]) => (
+                        <div
+                          key={sharerId}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
+                        >
+                          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(data.name)} flex items-center justify-center shrink-0`}>
+                            <span className="text-xs font-bold text-white">{getInitials(data.name)}</span>
+                          </div>
+                          <span className="text-sm text-white truncate">{data.name}</span>
+                          <span className="text-xs text-slate-500 ml-auto shrink-0">{data.topics.length}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
                 <Link
                   href="/shared-topics"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-white transition-colors shrink-0"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  View all
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  View all shared topics
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               </div>
-              {sharedTopics.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Shared", value: allSharedTopics.length },
-                    { label: "People", value: Object.keys(groupedBySharer).length },
-                  ].map((stat, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                      <p className="text-2xl font-bold text-white tabular-nums">{stat.value}</p>
-                      <p className="text-xs text-slate-500">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-
-            {/* Contributors row */}
-            {Object.keys(groupedBySharer).length > 0 && (
-              <div className="mb-8">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Contributors</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(groupedBySharer).map(([sharerId, data]) => (
-                    <div
-                      key={sharerId}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08]"
-                    >
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(data.name)} flex items-center justify-center`}>
-                        <span className="text-xs font-bold text-white">{getInitials(data.name)}</span>
-                      </div>
-                      <span className="text-sm text-white">{data.name}</span>
-                      <span className="text-xs text-slate-500">{data.topics.length}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {loadingShared ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-10 h-10 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
-                <p className="mt-4 text-sm text-slate-500">Loading shared topics…</p>
-              </div>
-            ) : sharedTopics.length === 0 ? (
-              <div className="text-center py-16 px-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">No shared topics yet</h3>
-                <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">
-                  When friends share topics with you, they’ll show up here.
-                </p>
-                <Link
-                  href="/friends"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  Find friends
-                </Link>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Recent shared</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  {allSharedTopics.slice(0, 6).map((topic, index) => renderTopicCard(topic, index))}
-                </div>
-                {allSharedTopics.length > 6 && (
-                  <div className="flex justify-center">
-                    <Link
-                      href="/shared-topics"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-white transition-colors"
-                    >
-                      All {allSharedTopics.length} shared topics
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Quick actions bento */}
-            <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { href: "/crud", onClick: undefined, title: "Tasks", desc: "Manage tasks", icon: "✓", accent: false },
-                { href: "/topics", onClick: undefined, title: "Topics", desc: "Organize topics", icon: "📝", accent: false },
-                { href: "/topics-view", onClick: undefined, title: "View", desc: "Browse knowledge", icon: "👁", accent: false },
-              ].map((action, i) => {
-                const content = (
-                  <>
-                    <span
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-medium transition-colors ${
-                        action.accent
-                          ? "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20"
-                          : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20"
-                      }`}
-                    >
-                      {action.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-white">{action.title}</h3>
-                      <p className="text-xs text-slate-500">{action.desc}</p>
-                    </div>
-                    <svg className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </>
-                );
-                const className = `group flex items-center gap-4 p-4 rounded-xl bg-white/[0.04] border transition-all text-left w-full ${
-                  action.accent
-                    ? "border-purple-500/20 hover:border-purple-500/40 hover:bg-white/[0.06]"
-                    : "border-white/[0.08] hover:border-blue-500/30 hover:bg-white/[0.06]"
-                }`;
-
-                return action.href ? (
-                  <Link key={i} href={action.href} className={className}>
-                    {content}
-                  </Link>
-                ) : (
-                  <button key={i} type="button" onClick={action.onClick} className={className}>
-                    {content}
-                  </button>
-                );
-              })}
-            </div>
-            {ragChatEnabled && (
-              <p className="mt-3 text-xs text-slate-500">
-                Tip: it already knows your notes and topics - they're kept in sync automatically as you save.
-              </p>
-            )}
           </main>
         ) : (
           /* Features for guests */
@@ -564,7 +611,7 @@ export default function Home() {
               {features.map((feature, index) => (
                 <div
                   key={index}
-                  className="group p-6 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-blue-500/20 transition-all"
+                  className="group p-6 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-blue-500/20 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 transition-all duration-200"
                 >
                   <div className={`w-12 h-12 rounded-lg ${feature.bg} flex items-center justify-center mb-4 ${feature.text || "text-blue-400"}`}>
                     {feature.icon}
@@ -591,7 +638,26 @@ export default function Home() {
         )}
 
         {/* Blog */}
-        {blogPosts.length > 0 && (
+        {loadingBlogs ? (
+          <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+            <div className="text-center mb-10">
+              <p className="text-blue-400 font-medium text-xs uppercase tracking-wider mb-2">Blog</p>
+              <h2 className="text-2xl font-bold text-white">Latest posts</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden animate-pulse">
+                  <div className="aspect-[16/10] bg-white/[0.05]" />
+                  <div className="p-4">
+                    <div className="h-4 w-3/4 rounded bg-white/[0.06] mb-3" />
+                    <div className="h-3 w-full rounded bg-white/[0.06] mb-2" />
+                    <div className="h-3 w-1/2 rounded bg-white/[0.06]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : blogPosts.length > 0 && (
           <section className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
             <div className="text-center mb-10">
               <p className="text-blue-400 font-medium text-xs uppercase tracking-wider mb-2">Blog</p>
@@ -602,7 +668,7 @@ export default function Home() {
                 <Link
                   key={post._id}
                   href={`/blog/${post._id}`}
-                  className="group block rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden hover:border-blue-500/30 transition-colors"
+                  className="group block rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden hover:border-blue-500/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 transition-all duration-200"
                 >
                   {post.coverImage ? (
                     <div className="aspect-[16/10] overflow-hidden">

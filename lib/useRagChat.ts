@@ -10,12 +10,20 @@ export interface ChatSource {
 }
 
 export interface ChatMessage {
+  id: string;
   role: "user" | "assistant";
   content: string;
   sources?: ChatSource[];
+  timestamp: number;
 }
 
 const SESSION_STORAGE_KEY = "denotes-rag-session-id";
+
+function newId(): string {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 /**
  * Shared chat state/actions behind both places the AI assistant
@@ -32,32 +40,34 @@ export function useRagChat() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const sessionIdRef = useRef<string>("");
+  // The last question actually sent to the backend - kept separate from
+  // `input` (which is cleared immediately) so a failed request can be
+  // retried without the user having to retype it.
+  const lastQuestionRef = useRef<string>("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       let sid = window.localStorage.getItem(SESSION_STORAGE_KEY);
       if (!sid) {
-        sid = crypto.randomUUID();
+        sid = newId();
         window.localStorage.setItem(SESSION_STORAGE_KEY, sid);
       }
       sessionIdRef.current = sid;
     } catch {
       // localStorage can throw in private browsing / disabled storage;
       // fall back to an in-memory session id for this page load.
-      sessionIdRef.current = crypto.randomUUID();
+      sessionIdRef.current = newId();
     }
   }, []);
 
-  /** `override` lets a caller (e.g. a suggestion chip) send a specific
-   * question without first having to route it through the input box. */
-  async function sendMessage(override?: string) {
-    const question = (override ?? input).trim();
-    if (!question || loading) return;
-
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
-    setInput("");
+  /** Does the actual round trip for one question - split out from
+   * sendMessage() so retry() can redo just the network call without
+   * appending a duplicate user bubble. */
+  async function runQuery(question: string) {
+    lastQuestionRef.current = question;
     setLoading(true);
     setError(null);
 
@@ -75,13 +85,34 @@ export function useRagChat() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.answer, sources: data.sources },
+        { id: newId(), role: "assistant", content: data.answer, sources: data.sources, timestamp: Date.now() },
       ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
+  }
+
+  /** `override` lets a caller (e.g. a suggestion chip) send a specific
+   * question without first having to route it through the input box. */
+  async function sendMessage(override?: string) {
+    const question = (override ?? input).trim();
+    if (!question || loading) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { id: newId(), role: "user", content: question, timestamp: Date.now() },
+    ]);
+    setInput("");
+    await runQuery(question);
+  }
+
+  /** Re-asks the last question after a failed request, without adding
+   * a second copy of the user's message to the transcript. */
+  function retry() {
+    if (!lastQuestionRef.current || loading) return;
+    runQuery(lastQuestionRef.current);
   }
 
   async function syncMyNotes() {
@@ -91,6 +122,7 @@ export function useRagChat() {
     try {
       const result = await syncMyNotesToRag();
       if (result.success) {
+        setLastSyncedAt(new Date());
         setSyncStatus(
           result.summary.chunksStored > 0
             ? `Indexed ${result.summary.requested} note${result.summary.requested === 1 ? "" : "s"}/topic${result.summary.requested === 1 ? "" : "s"} for chat.`
@@ -109,6 +141,7 @@ export function useRagChat() {
   async function resetChat() {
     setMessages([]);
     setError(null);
+    lastQuestionRef.current = "";
     try {
       await fetch("/api/rag/chat/reset", {
         method: "POST",
@@ -128,7 +161,9 @@ export function useRagChat() {
     error,
     syncing,
     syncStatus,
+    lastSyncedAt,
     sendMessage,
+    retry,
     syncMyNotes,
     resetChat,
   };
