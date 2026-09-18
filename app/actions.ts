@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
 import { sendPasswordResetEmail, sendTopicSharedEmail, sendFriendRequestEmail, sendTaskAssignedEmail, sendVerificationEmail } from "@/lib/email";
+import { scheduleUserContentReindex } from "@/lib/rag/ingest";
 
 // Helper function to get current user ID
 // Exported so other server-only modules (e.g. lib/rag/*) can reuse the
@@ -1058,6 +1059,7 @@ export async function createTopic(formData: FormData) {
 
     const result = await collection.insertOne(newTopic);
     revalidatePath("/topics");
+    scheduleUserContentReindex(userId);
     return { success: true, id: result.insertedId.toString() };
   } catch (error) {
     console.error("Error creating topic:", error);
@@ -1188,6 +1190,7 @@ export async function updateTopic(topicId: string, formData: FormData) {
     }
 
     revalidatePath("/topics");
+    scheduleUserContentReindex(userId);
     return { success: true };
   } catch (error) {
     console.error("Error updating topic:", error);
@@ -1235,6 +1238,7 @@ export async function deleteTopic(topicId: string) {
     }
 
     revalidatePath("/topics");
+    scheduleUserContentReindex(userId);
     return { success: true };
   } catch (error) {
     console.error("Error deleting topic:", error);
@@ -1870,6 +1874,7 @@ export async function createNote(formData: FormData) {
 
     const result = await collection.insertOne(newNote);
     revalidatePath("/audio-notes");
+    scheduleUserContentReindex(userId);
     return { success: true, id: result.insertedId.toString() };
   } catch (error) {
     console.error("Error creating note:", error);
@@ -1991,6 +1996,7 @@ export async function updateNote(noteId: string, formData: FormData) {
     }
 
     revalidatePath("/audio-notes");
+    scheduleUserContentReindex(userId);
     return { success: true };
   } catch (error) {
     console.error("Error updating note:", error);
@@ -2020,6 +2026,7 @@ export async function deleteNote(noteId: string) {
     }
 
     revalidatePath("/audio-notes");
+    scheduleUserContentReindex(userId);
     return { success: true };
   } catch (error) {
     console.error("Error deleting note:", error);

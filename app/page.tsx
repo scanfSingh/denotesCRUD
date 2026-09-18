@@ -5,8 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { testDatabaseConnection, getSharedTopics, getPublishedBlogPosts, type SharedTopic, type Topic, type BlogPost } from "./actions";
 import Navigation from "./components/Navigation";
-import { featureFlags } from "@/lib/featureFlags";
-import { getEffectiveFlag } from "./feature-flags-actions";
+import { useFeatureFlags } from "./components/FeatureFlagsProvider";
 import { OPEN_RAG_CHAT_EVENT } from "./components/RagChatWidget";
 
 function openAiAssistant() {
@@ -24,15 +23,9 @@ export default function Home() {
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loadingBlogs, setLoadingBlogs] = useState(false);
-  // Env default first, reconciled with any admin override shortly
-  // after mount - see app/feature-flags-actions.ts.
-  const [ragChatEnabled, setRagChatEnabled] = useState(featureFlags.ragChat.enabled);
-
-  useEffect(() => {
-    getEffectiveFlag("ragChat.enabled")
-      .then(setRagChatEnabled)
-      .catch(() => {});
-  }, []);
+  // Fed from MongoDB via the root layout + FeatureFlagsProvider - see
+  // app/components/FeatureFlagsProvider.tsx.
+  const ragChatEnabled = useFeatureFlags().ragChat.enabled;
 
   useEffect(() => {
     async function checkConnection() {
@@ -556,7 +549,7 @@ export default function Home() {
             </div>
             {ragChatEnabled && (
               <p className="mt-3 text-xs text-slate-500">
-                Tip: open the AI assistant and tap the sync icon to index your notes so it can answer from them.
+                Tip: it already knows your notes and topics - they're kept in sync automatically as you save.
               </p>
             )}
           </main>

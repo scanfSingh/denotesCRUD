@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { featureFlags } from "@/lib/featureFlags";
+import { useFeatureFlags } from "./FeatureFlagsProvider";
 import { syncMyNotesToRag } from "@/app/rag-actions";
-import { getEffectiveFlag } from "@/app/feature-flags-actions";
 
 interface ChatSource {
   url: string;
@@ -33,10 +32,10 @@ export default function RagChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  // Starts from the build-time env default (avoids waiting on a round
-  // trip for the common case), then reconciles with any admin override
-  // saved in Mongo - see app/feature-flags-actions.ts.
-  const [ragChatEnabled, setRagChatEnabled] = useState(featureFlags.ragChat.enabled);
+  // Fed from MongoDB (via the root layout + FeatureFlagsProvider), so
+  // this reflects the admin dashboard's current value with no client
+  // round trip needed.
+  const { ragChat } = useFeatureFlags();
   const sessionIdRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -66,15 +65,7 @@ export default function RagChatWidget() {
     return () => window.removeEventListener(OPEN_RAG_CHAT_EVENT, openWidget);
   }, []);
 
-  useEffect(() => {
-    getEffectiveFlag("ragChat.enabled")
-      .then(setRagChatEnabled)
-      .catch(() => {
-        // Keep the env-default value already in state on failure.
-      });
-  }, []);
-
-  if (!ragChatEnabled) return null;
+  if (!ragChat.enabled) return null;
   if (status !== "authenticated" || !session) return null;
 
   async function sendMessage() {
@@ -158,7 +149,7 @@ export default function RagChatWidget() {
               <button
                 onClick={syncMyNotes}
                 disabled={syncing}
-                title="Index my notes & topics so chat can answer from them"
+                title="Notes & topics sync automatically - tap to force a refresh now"
                 className="rounded p-1.5 text-purple-100 hover:bg-white/10 hover:text-white disabled:opacity-50"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -195,8 +186,8 @@ export default function RagChatWidget() {
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Ask me anything about denotes, or about your own notes and topics. Tap the sync icon
-                above first so I can index them.
+                Ask me anything about denotes, or about your own notes and topics - they're kept in
+                sync automatically.
               </p>
             )}
             {messages.map((m, i) => (

@@ -6,12 +6,15 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import EmailVerificationBanner from "./EmailVerificationBanner";
-import { featureFlags } from "@/lib/featureFlags";
+import { useFeatureFlags } from "./FeatureFlagsProvider";
 import { isCurrentUserAdmin } from "../actions";
 
 export default function Navigation() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  // Fed from MongoDB via the root layout + FeatureFlagsProvider -
+  // shadows the old static import so everything below reads unchanged.
+  const featureFlags = useFeatureFlags();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileHover, setProfileHover] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);

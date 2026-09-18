@@ -3,6 +3,7 @@ import { Instrument_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import "@/styles/globals.css";
 import Providers from "./providers";
+import { getAllFeatureFlags } from "./feature-flags-actions";
 
 const instrumentSans = Instrument_Sans({ 
   subsets: ["latin"],
@@ -165,11 +166,19 @@ const jsonLd = {
   },
 };
 
-export default function RootLayout({
+// Feature flags now live in MongoDB (see lib/featureFlagOverrides.ts)
+// and can be toggled by an admin at any time without a redeploy, so
+// this layout has to hit the database on every request rather than
+// being statically cached - hence the async component + force-dynamic.
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const flags = await getAllFeatureFlags();
+
   return (
     <html lang="en" className={instrumentSans.variable}>
       <head>
@@ -179,7 +188,7 @@ export default function RootLayout({
         />
       </head>
       <body className={instrumentSans.className}>
-        <Providers>{children}</Providers>
+        <Providers flags={flags}>{children}</Providers>
         <Analytics />
       </body>
     </html>

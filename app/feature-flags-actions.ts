@@ -2,18 +2,22 @@
 
 import { isCurrentUserAdmin } from "./actions";
 import {
-  getFeatureFlagOverrides,
-  setFeatureFlagOverride as setOverride,
-  clearFeatureFlagOverride as clearOverride,
+  getFeatureFlags,
+  setFeatureFlagValue,
+  resetFeatureFlagValue,
 } from "@/lib/featureFlagOverrides";
-import { listToggleableFlags, resolveFlag, getStaticFlag } from "@/lib/featureFlags";
+import { listToggleableFlags, getFlagAtPath, type FeatureFlags } from "@/lib/featureFlags";
 
 /**
  * Server actions backing the "Feature Flags" panel in the admin
- * dashboard (app/admin/page.tsx), plus a single unrestricted lookup
- * (getEffectiveFlag) that any logged-in surface can call to find out
- * whether a specific feature is currently on - the client can't
- * enumerate all flags through it, only check one at a time.
+ * dashboard (app/admin/page.tsx), plus getAllFeatureFlags() - the
+ * unrestricted read used by the root layout to feed every flag's
+ * current value into the app via FeatureFlagsProvider.
+ *
+ * MongoDB (lib/featureFlagOverrides.ts) is the source of truth for
+ * every flag's live value now, not just admin-touched deltas -
+ * env vars only supply the "factory default" a flag is seeded with
+ * (new deployment) or reset to (admin dashboard "Reset" action).
  */
 
 export interface FeatureFlagRow {
@@ -22,7 +26,9 @@ export interface FeatureFlagRow {
   key: string;
   label: string;
   envDefault: boolean;
-  /** null = no override saved, currently using the env default. */
+  /** null = currently equal to the env default; non-null = admin has
+   * diverged this flag from its factory default. Kept for the admin
+   * dashboard's "Overridden" badge/"Reset" affordance. */
   override: boolean | null;
   effective: boolean;
 }
@@ -36,12 +42,15 @@ export async function getFeatureFlagDashboard(): Promise<
       return { success: false, error: "Unauthorized" };
     }
 
-    const overrides = await getFeatureFlagOverrides();
-    const flags: FeatureFlagRow[] = listToggleableFlags().map((f) => ({
-      ...f,
-      override: f.path in overrides ? overrides[f.path] : null,
-      effective: resolveFlag(f.path, overrides),
-    }));
+    const dbFlags = await getFeatureFlags();
+    const flags: FeatureFlagRow[] = listToggleableFlags().map((f) => {
+      const effective = getFlagAtPath(dbFlags, f.path);
+      return {
+        ...f,
+        override: effective === f.envDefault ? null : effective,
+        effective,
+      };
+    });
 
     return { success: true, flags };
   } catch (error) {
@@ -60,7 +69,7 @@ export async function setFeatureFlagOverride(
       return { success: false, error: "Unauthorized" };
     }
 
-    await setOverride(path, value);
+    await setFeatureFlagValue(path, value);
     return { success: true };
   } catch (error) {
     console.error("[feature-flags-actions] setFeatureFlagOverride failed:", error);
@@ -68,7 +77,7 @@ export async function setFeatureFlagOverride(
   }
 }
 
-/** Removes the override so the flag falls back to its env-var default. */
+/** Resets the flag in the database back to its env-var factory default. */
 export async function clearFeatureFlagOverride(
   path: string
 ): Promise<{ success: true } | { success: false; error: string }> {
@@ -78,7 +87,7 @@ export async function clearFeatureFlagOverride(
       return { success: false, error: "Unauthorized" };
     }
 
-    await clearOverride(path);
+    await resetFeatureFlagValue(path);
     return { success: true };
   } catch (error) {
     console.error("[feature-flags-actions] clearFeatureFlagOverride failed:", error);
@@ -87,18 +96,19 @@ export async function clearFeatureFlagOverride(
 }
 
 /**
- * Not admin-gated - any logged-in-or-not surface (e.g. RagChatWidget,
- * the home page hero) needs this to know whether a given feature is
- * currently enabled, including admin overrides. Only ever resolves a
- * single path the caller already knows the name of, so it can't be
- * used to enumerate the full flag set.
+ * Reads every flag's current value from the database in one call - used
+ * by the root layout to hydrate FeatureFlagsProvider on every request.
+ * Not admin-gated (every visitor's page render needs this), but only
+ * ever returns booleans already safe to ship to the client. Falls back
+ * to the static env-var defaults if the database is unreachable, so a
+ * Mongo hiccup never breaks page rendering.
  */
-export async function getEffectiveFlag(path: string): Promise<boolean> {
+export async function getAllFeatureFlags(): Promise<FeatureFlags> {
   try {
-    const overrides = await getFeatureFlagOverrides();
-    return resolveFlag(path, overrides);
+    return await getFeatureFlags();
   } catch (error) {
-    console.error("[feature-flags-actions] getEffectiveFlag failed:", error);
-    return getStaticFlag(path);
+    console.error("[feature-flags-actions] getAllFeatureFlags failed, using static defaults:", error);
+    const { featureFlags } = await import("@/lib/featureFlags");
+    return featureFlags;
   }
 }

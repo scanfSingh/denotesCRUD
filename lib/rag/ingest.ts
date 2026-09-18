@@ -2,6 +2,7 @@
  * End-to-end ingestion: URLs -> fetch -> chunk -> store (Upstash Vector
  * embeds automatically). Called from app/api/rag/ingest/route.ts.
  */
+import { after } from "next/server";
 import { ragConfig } from "./config";
 import { fetchUrls } from "./loader";
 import { loadUserContent } from "./notesLoader";
@@ -57,4 +58,31 @@ export async function ingestUserContent(userId: string): Promise<IngestSummary> 
   const chunksStored = await storeChunks(chunks, namespace);
 
   return { requested: docs.length, fetched: docs.length, chunksStored, failedUrls: [] };
+}
+
+/**
+ * Keeps a user's personal RAG namespace current automatically, without
+ * making them click the widget's sync button: call this from the end
+ * of any note/topic create/update/delete action (see app/actions.ts).
+ *
+ * Uses Next's after() so the re-index runs once the response has
+ * already been sent - saving a note never waits on Mongo + Upstash +
+ * embeddings. Errors are swallowed (logged only): a background
+ * re-index hiccup should never surface as a broken save, and the next
+ * edit (or a manual sync) will simply retry from scratch since
+ * ingestUserContent() always rebuilds the whole namespace.
+ *
+ * No-ops if RAG isn't configured for this deployment, so it's safe to
+ * call unconditionally from every mutation.
+ */
+export function scheduleUserContentReindex(userId: string): void {
+  if (!ragConfig.upstash.url || !ragConfig.upstash.token) return;
+
+  after(async () => {
+    try {
+      await ingestUserContent(userId);
+    } catch (err) {
+      console.error(`[rag/ingest] Background re-index failed for user ${userId}:`, err);
+    }
+  });
 }

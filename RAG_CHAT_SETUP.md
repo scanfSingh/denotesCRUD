@@ -153,10 +153,14 @@ never see theirs - namespaces don't overlap.
 
 It's a full re-index each time you sync (not incremental) - simplest
 correct option for typical personal note volumes (tens to low
-hundreds of notes/topics per user, no pagination in this app). Re-sync
-any time after editing/adding/deleting notes to keep chat answers
-current; there's no automatic re-index on save yet (see "Extending
-this" below).
+hundreds of notes/topics per user, no pagination in this app).
+
+Saving, editing, or deleting a note/topic also triggers this automatically
+in the background (`scheduleUserContentReindex()` in `lib/rag/ingest.ts`,
+called from `app/actions.ts`'s note/topic CRUD actions via Next's
+`after()`, so it never delays the save itself) - the manual sync button
+is still there for a one-off full refresh (e.g. right after turning the
+feature on) but isn't required day to day.
 
 ## Notes on deploying to Vercel
 
@@ -177,13 +181,11 @@ this" below).
 
 ## Extending this
 
-- **Auto re-index on save**: call `ingestUserContent(userId)`
-  (`lib/rag/ingest.ts`) from the end of `createNote`/`updateNote`/
-  `deleteNote`/`createTopic`/`updateTopic`/`deleteTopic`
-  (`app/actions.ts`) instead of requiring a manual sync click - wrap in
-  try/catch so a RAG hiccup never blocks saving a note. Worth
-  debouncing/batching if users edit frequently, since it's a full
-  re-index per call today.
+- **Debounce the auto re-index**: `scheduleUserContentReindex()` runs a
+  full re-index on every single save, which is wasteful if a user edits
+  the same note several times in quick succession. Worth coalescing
+  (e.g. a short delay keyed by userId, or a queue) if that turns out to
+  matter at your note-editing frequency.
 - **Streaming responses**: both Gemini's REST API and Groq's OpenAI-compatible
   SDK support streaming; wire that through a streamed `Response` in the
   route handler for a typing effect in the widget.

@@ -152,13 +152,19 @@ export function useFeatureFlag(
 }
 
 // ---------------------------------------------------------------------
-// Runtime overrides (admin dashboard)
+// Database-backed flags (admin dashboard)
 // ---------------------------------------------------------------------
 //
+// The static `featureFlags` object above is env-var-driven and still
+// exists as (a) the TypeScript shape every flag doc must match, (b)
+// the "factory default" seed for a brand new deployment's DB doc and
+// for the admin dashboard's "Reset" action, and (c) a safe fallback if
+// the database is ever unreachable. The database (see
+// lib/featureFlagOverrides.ts) is the actual runtime source of truth -
+// every flag lives there, not just the ones an admin has touched.
+//
 // Everything below is pure (no I/O), so it's safe to import from both
-// server and client code. The actual override values live in Mongo
-// (see lib/featureFlagOverrides.ts) and are only ever read/written
-// from server actions (see app/feature-flags-actions.ts).
+// server and client code.
 
 /** Categories intentionally left out of the runtime-toggleable
  * dashboard. Auth methods stay env-only so an admin can never
@@ -167,7 +173,7 @@ export function useFeatureFlag(
 const NON_TOGGLEABLE_CATEGORIES: (keyof FeatureFlags)[] = ["auth"];
 
 export interface FeatureFlagEntry {
-  /** Dot path used as the override key, e.g. "ragChat.enabled". */
+  /** Dot path used as the flag's key in the database, e.g. "ragChat.enabled". */
   path: string;
   category: string;
   key: string;
@@ -203,16 +209,39 @@ export function listToggleableFlags(): FeatureFlagEntry[] {
 }
 
 /** Reads a single dot-path boolean straight out of the static
- * `featureFlags` object, e.g. getStaticFlag("ragChat.enabled"). */
+ * `featureFlags` object, e.g. getStaticFlag("ragChat.enabled"). Used
+ * as the "factory default" a flag resets back to. */
 export function getStaticFlag(path: string): boolean {
   const [category, key] = path.split(".");
   const group = (featureFlags as unknown as Record<string, Record<string, unknown>>)[category];
   return Boolean(group?.[key]);
 }
 
-/** Applies a DB override on top of the env-var default for one flag,
- * without mutating the static featureFlags object. */
-export function resolveFlag(path: string, overrides: Record<string, boolean>): boolean {
-  return path in overrides ? overrides[path] : getStaticFlag(path);
+/** Reads a single dot-path boolean out of any FeatureFlags-shaped
+ * object - used for both the static defaults and a flag set loaded
+ * from the database. */
+export function getFlagAtPath(flags: FeatureFlags, path: string): boolean {
+  const [category, key] = path.split(".");
+  const group = (flags as unknown as Record<string, Record<string, unknown>>)[category];
+  return Boolean(group?.[key]);
+}
+
+/**
+ * Deep-merges a (possibly partial/legacy) flag set loaded from the
+ * database on top of the current factory defaults. This is what makes
+ * it safe to add a brand new flag to `featureFlags` above at any time:
+ * an older database doc that predates that flag simply won't have it,
+ * and this fills the gap with the env-var default instead of
+ * `undefined`, category by category.
+ */
+export function mergeWithDefaults(dbFlags: Partial<FeatureFlags> | null | undefined): FeatureFlags {
+  const merged = JSON.parse(JSON.stringify(featureFlags)) as Record<string, Record<string, unknown>>;
+  if (dbFlags) {
+    for (const [category, group] of Object.entries(dbFlags)) {
+      if (!group || typeof group !== "object") continue;
+      merged[category] = { ...(merged[category] || {}), ...(group as Record<string, unknown>) };
+    }
+  }
+  return merged as unknown as FeatureFlags;
 }
 

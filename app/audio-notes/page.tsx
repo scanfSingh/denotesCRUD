@@ -13,9 +13,12 @@ import {
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 import AudioRecorder from "../components/AudioRecorder";
-import { featureFlags } from "@/lib/featureFlags";
+import { useFeatureFlags } from "../components/FeatureFlagsProvider";
 
 export default function AudioNotesPage() {
+  // Fed from MongoDB via the root layout + FeatureFlagsProvider -
+  // shadows the old static import so everything below reads unchanged.
+  const featureFlags = useFeatureFlags();
   const [notes, setNotes] = useState<Note[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
