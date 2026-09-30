@@ -70,7 +70,10 @@ export default function Navigation() {
     if (navFlags.blog && featureFlags.blog.enabled) {
       links.push({ href: "/blog", label: "Blog", icon: "📝" });
     }
-    
+    if (navFlags.interview && featureFlags.interview.enabled) {
+      links.push({ href: "/mock-interview", label: "Mock Interview", icon: "🎯" });
+    }
+
     return links;
   }, [navFlags, showFamilies]);
 

@@ -85,6 +85,14 @@ export const featureFlags = {
     enabled: process.env.NEXT_PUBLIC_FF_RAG_CHAT === "true",
   },
 
+  // Mock Interview Feature (AI-run interview grounded on an uploaded
+  // resume, see MOCK_INTERVIEW_SETUP.md)
+  interview: {
+    /** Enable the mock interview page. Off by default since it needs
+     * GEMINI_API_KEY/GROQ_API_KEY configured. */
+    enabled: process.env.NEXT_PUBLIC_FF_INTERVIEW === "true",
+  },
+
   // UI Features
   ui: {
     /** Enable dark mode toggle */
@@ -119,7 +127,10 @@ export const featureFlags = {
     
     /** Show Blog link */
     blog: process.env.NEXT_PUBLIC_FF_NAV_BLOG !== "false",
-    
+
+    /** Show Mock Interview link */
+    interview: process.env.NEXT_PUBLIC_FF_NAV_INTERVIEW !== "false",
+
     /** Show Friends link */
     friends: process.env.NEXT_PUBLIC_FF_NAV_FRIENDS !== "false",
     
