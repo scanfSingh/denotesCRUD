@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { parseResumeFile } from "@/lib/interview/resumeParser";
 import { generateInterviewTurn } from "@/lib/interview/generator";
 import { createInterviewSession, type InterviewDurationMinutes } from "@/lib/interview/store";
+import { getUserResume, saveUserResume } from "@/lib/interview/resumeStore";
 import { interviewConfig } from "@/lib/interview/config";
 
 export const runtime = "nodejs";
@@ -12,13 +13,18 @@ const VALID_DURATIONS: InterviewDurationMinutes[] = [30, 60, 90];
 
 /**
  * POST /api/interview/start
- * multipart/form-data: resume (File), skills (comma-separated string),
- * role (string), difficulty ("easy" | "medium" | "hard"),
+ * multipart/form-data: resume (File, optional), skills (comma-separated
+ * string), role (string), difficulty ("easy" | "medium" | "hard"),
  * duration ("30" | "60" | "90", minutes)
  *
  * A plain route rather than a server action because it needs to accept
  * a file upload - parses the resume, kicks off the interview with the
  * LLM for the first question, and persists the new session.
+ *
+ * The resume file is optional: when provided it's parsed and saved as
+ * the user's current resume (replacing whatever was there before), so
+ * the next interview can reuse it without asking again; when omitted,
+ * the previously saved resume is used instead.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -51,22 +57,35 @@ export async function POST(request: NextRequest) {
       ? (durationParsed as InterviewDurationMinutes)
       : 30;
 
-    if (!resumeFile) {
-      return NextResponse.json({ error: "Upload a resume file (PDF or DOCX)" }, { status: 400 });
-    }
-    if (resumeFile.size > interviewConfig.maxResumeBytes) {
-      return NextResponse.json(
-        { error: `Resume file is too large (max ${Math.round(interviewConfig.maxResumeBytes / 1024 / 1024)}MB)` },
-        { status: 400 }
-      );
+    let resumeText: string;
+    let resumeFileName: string;
+
+    if (resumeFile) {
+      if (resumeFile.size > interviewConfig.maxResumeBytes) {
+        return NextResponse.json(
+          { error: `Resume file is too large (max ${Math.round(interviewConfig.maxResumeBytes / 1024 / 1024)}MB)` },
+          { status: 400 }
+        );
+      }
+      const parsed = await parseResumeFile(resumeFile);
+      resumeText = parsed.text;
+      resumeFileName = resumeFile.name;
+      // Save as the user's current resume so future interviews (and the
+      // "resume on file" display) don't need a re-upload.
+      await saveUserResume(userId, { resumeText, resumeFileName });
+    } else {
+      const stored = await getUserResume(userId);
+      if (!stored) {
+        return NextResponse.json({ error: "Upload a resume file (PDF or DOCX)" }, { status: 400 });
+      }
+      resumeText = stored.resumeText;
+      resumeFileName = stored.resumeFileName;
     }
 
     const skills = skillsRaw
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-
-    const { text: resumeText } = await parseResumeFile(resumeFile);
 
     const firstTurn = await generateInterviewTurn(
       { resumeText, skills, role, difficulty, turns: [] },
@@ -80,7 +99,7 @@ export async function POST(request: NextRequest) {
     const doc = await createInterviewSession({
       userId,
       resumeText,
-      resumeFileName: resumeFile.name,
+      resumeFileName,
       skills,
       role,
       difficulty,
@@ -93,6 +112,7 @@ export async function POST(request: NextRequest) {
       question: firstQuestion,
       durationMinutes: doc.durationMinutes,
       startedAt: doc.createdAt.toISOString(),
+      resumeFileName,
     });
   } catch (error) {
     console.error("[api/interview/start] Error:", error);

@@ -67,6 +67,11 @@ export default function MockInterviewPage() {
   const [starting, setStarting] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [pastSessions, setPastSessions] = useState<InterviewSummary[]>([]);
+  // The resume saved from a previous visit, if any - lets the setup
+  // screen skip asking for an upload every time. "Replace" swaps this
+  // out for a fresh upload, which also updates what's saved for next time.
+  const [storedResume, setStoredResume] = useState<{ fileName: string; updatedAt: string } | null>(null);
+  const [showResumeInput, setShowResumeInput] = useState(false);
 
   // Interview
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -93,6 +98,17 @@ export default function MockInterviewPage() {
 
   useEffect(() => {
     getMyInterviewSessions().then(setPastSessions).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/interview/resume")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.resumeFileName) {
+          setStoredResume({ fileName: data.resumeFileName, updatedAt: data.updatedAt });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -138,20 +154,24 @@ export default function MockInterviewPage() {
   async function handleStart(e: React.FormEvent) {
     e.preventDefault();
     setSetupError(null);
-    if (!resumeFile) {
+    if (!resumeFile && !storedResume) {
       setSetupError("Upload your resume (PDF or DOCX) to get started");
       return;
     }
-    const fileError = validateResumeFile(resumeFile);
-    if (fileError) {
-      setSetupError(fileError);
-      return;
+    if (resumeFile) {
+      const fileError = validateResumeFile(resumeFile);
+      if (fileError) {
+        setSetupError(fileError);
+        return;
+      }
     }
 
     setStarting(true);
     try {
       const formData = new FormData();
-      formData.append("resume", resumeFile);
+      // Omitted when reusing the resume already on file - the server
+      // falls back to that saved copy.
+      if (resumeFile) formData.append("resume", resumeFile);
       formData.append("skills", skills);
       formData.append("role", role || "Software Engineer");
       formData.append("difficulty", difficulty);
@@ -165,6 +185,11 @@ export default function MockInterviewPage() {
       setTurns([{ question: data.question }]);
       autoEndedRef.current = false;
       setDeadline(new Date(data.startedAt).getTime() + data.durationMinutes * 60_000);
+      if (data.resumeFileName) {
+        setStoredResume({ fileName: data.resumeFileName, updatedAt: new Date().toISOString() });
+      }
+      setShowResumeInput(false);
+      setResumeFile(null);
       setPhase("interview");
     } catch (err) {
       setSetupError(err instanceof Error ? err.message : "Failed to start the interview");
@@ -233,6 +258,7 @@ export default function MockInterviewPage() {
     setFeedback(null);
     setInterviewError(null);
     setResumeFile(null);
+    setShowResumeInput(false);
     setDeadline(null);
     setRemainingSeconds(null);
     autoEndedRef.current = false;
@@ -261,26 +287,59 @@ export default function MockInterviewPage() {
               >
                 <div>
                   <label className="block text-sm font-medium text-white mb-1.5">Resume (PDF or DOCX)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      if (file) {
-                        const fileError = validateResumeFile(file);
-                        if (fileError) {
-                          setSetupError(fileError);
-                          setResumeFile(null);
-                          e.target.value = "";
-                          return;
-                        }
-                      }
-                      setSetupError(null);
-                      setResumeFile(file);
-                    }}
-                    className="block w-full text-sm text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-600 file:text-white file:text-sm file:font-medium hover:file:bg-purple-500 file:cursor-pointer cursor-pointer rounded-lg border border-white/[0.1] bg-white/[0.04]"
-                  />
-                  {resumeFile && <p className="mt-1.5 text-xs text-slate-500">{resumeFile.name}</p>}
+                  {storedResume && !showResumeInput ? (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm text-white truncate">{storedResume.fileName}</p>
+                        <p className="text-xs text-slate-500">
+                          On file · updated {new Date(storedResume.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowResumeInput(true)}
+                        className="shrink-0 text-xs font-medium text-purple-300 hover:text-purple-200"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          if (file) {
+                            const fileError = validateResumeFile(file);
+                            if (fileError) {
+                              setSetupError(fileError);
+                              setResumeFile(null);
+                              e.target.value = "";
+                              return;
+                            }
+                          }
+                          setSetupError(null);
+                          setResumeFile(file);
+                        }}
+                        className="block w-full text-sm text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-600 file:text-white file:text-sm file:font-medium hover:file:bg-purple-500 file:cursor-pointer cursor-pointer rounded-lg border border-white/[0.1] bg-white/[0.04]"
+                      />
+                      {resumeFile && <p className="mt-1.5 text-xs text-slate-500">{resumeFile.name}</p>}
+                      {storedResume && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowResumeInput(false);
+                            setResumeFile(null);
+                            setSetupError(null);
+                          }}
+                          className="mt-1.5 text-xs font-medium text-slate-400 hover:text-slate-300"
+                        >
+                          Keep current resume ({storedResume.fileName})
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div>

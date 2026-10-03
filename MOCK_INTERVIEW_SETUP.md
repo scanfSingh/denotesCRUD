@@ -29,6 +29,24 @@ resume text, chosen skills/role/difficulty, chosen duration, the full
 question/answer transcript, and - once finished - a summary, strengths,
 improvements, and a 1-10 score.
 
+### Resume persistence
+
+A user's most recently uploaded resume is saved separately, in its own
+`userResumes` collection (one document per user, keyed by `userId`,
+`lib/interview/resumeStore.ts`) - so they're not asked to re-upload it on
+every visit:
+
+- Uploading a resume when starting an interview always saves it as that
+  user's current resume (`saveUserResume`), replacing whatever was saved
+  before.
+- Starting a new interview without choosing a file reuses the saved resume
+  (`getUserResume`) - if none exists yet, the API returns an error asking
+  for an upload.
+- `GET /api/interview/resume` returns the current filename + last-updated
+  time so the setup screen can show "Resume on file" instead of an empty
+  upload field; a "Replace" button reveals the file input again so the
+  user can swap it out anytime.
+
 ### Duration (30 / 60 / 90 minutes)
 
 The candidate picks a duration on the setup screen. `durationMinutes` is
@@ -81,9 +99,11 @@ needed to turn it on/off later.
 ## Step 3: Try it out
 
 Once the flag is on, "Mock Interview" appears in the nav and as a home-screen
-quick action. Upload a resume (PDF or DOCX only - legacy `.doc` and scanned
-image PDFs aren't supported), optionally list skills to focus on, pick a
-difficulty and a duration (30/60/90 minutes), and start.
+quick action. The first time, upload a resume (PDF or DOCX only - legacy
+`.doc` and scanned image PDFs aren't supported); after that it's remembered,
+so later visits just show "Resume on file" with a "Replace" option instead
+of asking again. Optionally list skills to focus on, pick a difficulty and a
+duration (30/60/90 minutes), and start.
 
 Each question can be answered either by typing or - via the "Speak" toggle
 above the answer box - by voice: it reuses the same `AudioRecorder` component
