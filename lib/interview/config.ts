@@ -12,9 +12,12 @@ export const interviewConfig = {
   gemini: ragConfig.gemini,
   groq: ragConfig.groq,
 
-  // How many question/answer turns before the interview wraps up on
-  // its own if the candidate hasn't ended it early.
-  maxTurns: Number(process.env.INTERVIEW_MAX_TURNS ?? "6"),
+  // The chosen interview duration (see InterviewDurationMinutes) is the
+  // primary way an interview wraps up. This turn count is just a
+  // defensive ceiling in case someone leaves a session open far longer
+  // than its duration - high enough to never kick in for a normal
+  // 30/60/90-minute interview, just a backstop against a runaway loop.
+  maxTurns: Number(process.env.INTERVIEW_MAX_TURNS ?? "40"),
 
   // Largest resume file accepted, in bytes (5 MB).
   maxResumeBytes: Number(process.env.INTERVIEW_MAX_RESUME_BYTES ?? String(5 * 1024 * 1024)),

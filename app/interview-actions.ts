@@ -8,6 +8,7 @@ import {
   answerLastTurn,
   completeInterviewSession,
   listInterviewSessions,
+  isInterviewTimeUp,
   type InterviewFeedback,
 } from "@/lib/interview/store";
 import { interviewConfig } from "@/lib/interview/config";
@@ -45,7 +46,9 @@ export async function submitInterviewAnswer(
       ...doc.turns.slice(0, -1),
       { ...doc.turns[doc.turns.length - 1], answer: trimmed },
     ];
-    const isFinal = turns.length >= interviewConfig.maxTurns;
+    // Whichever comes first: the candidate's chosen duration running out,
+    // or the defensive turn-count ceiling.
+    const isFinal = turns.length >= interviewConfig.maxTurns || isInterviewTimeUp(doc);
 
     const result = await generateInterviewTurn(
       { resumeText: doc.resumeText, skills: doc.skills, role: doc.role, difficulty: doc.difficulty, turns },
@@ -122,6 +125,7 @@ export interface InterviewSummary {
   id: string;
   role: string;
   difficulty: string;
+  durationMinutes: number;
   status: "in_progress" | "completed";
   score?: number;
   createdAt: string;
@@ -136,6 +140,7 @@ export async function getMyInterviewSessions(): Promise<InterviewSummary[]> {
     id: d._id.toString(),
     role: d.role,
     difficulty: d.difficulty,
+    durationMinutes: d.durationMinutes,
     status: d.status,
     score: d.feedback?.score,
     createdAt: d.createdAt.toISOString(),

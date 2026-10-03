@@ -16,6 +16,8 @@ export interface InterviewFeedback {
   score: number;
 }
 
+export type InterviewDurationMinutes = 30 | 60 | 90;
+
 export interface InterviewSessionDoc {
   _id?: ObjectId;
   userId: ObjectId;
@@ -24,6 +26,7 @@ export interface InterviewSessionDoc {
   skills: string[];
   role: string;
   difficulty: "easy" | "medium" | "hard";
+  durationMinutes: InterviewDurationMinutes;
   status: "in_progress" | "completed";
   turns: InterviewTurn[];
   feedback?: InterviewFeedback;
@@ -44,6 +47,7 @@ export async function createInterviewSession(input: {
   skills: string[];
   role: string;
   difficulty: "easy" | "medium" | "hard";
+  durationMinutes: InterviewDurationMinutes;
   firstQuestion: string;
 }): Promise<InterviewSessionDoc & { _id: ObjectId }> {
   const collection = await getCollection();
@@ -55,6 +59,7 @@ export async function createInterviewSession(input: {
     skills: input.skills,
     role: input.role,
     difficulty: input.difficulty,
+    durationMinutes: input.durationMinutes,
     status: "in_progress",
     turns: [{ question: input.firstQuestion }],
     createdAt: now,
@@ -62,6 +67,13 @@ export async function createInterviewSession(input: {
   };
   const result = await collection.insertOne(doc);
   return { ...doc, _id: result.insertedId };
+}
+
+/** True once the session's allotted time has elapsed - used to force a
+ * final evaluation even if the turn-count cap hasn't been hit yet. */
+export function isInterviewTimeUp(doc: Pick<InterviewSessionDoc, "createdAt" | "durationMinutes">): boolean {
+  const deadline = doc.createdAt.getTime() + doc.durationMinutes * 60_000;
+  return Date.now() >= deadline;
 }
 
 /** Only ever returns a session belonging to the given user - callers

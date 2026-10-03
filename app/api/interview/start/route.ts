@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseResumeFile } from "@/lib/interview/resumeParser";
 import { generateInterviewTurn } from "@/lib/interview/generator";
-import { createInterviewSession } from "@/lib/interview/store";
+import { createInterviewSession, type InterviewDurationMinutes } from "@/lib/interview/store";
 import { interviewConfig } from "@/lib/interview/config";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const VALID_DURATIONS: InterviewDurationMinutes[] = [30, 60, 90];
+
 /**
  * POST /api/interview/start
  * multipart/form-data: resume (File), skills (comma-separated string),
- * role (string), difficulty ("easy" | "medium" | "hard")
+ * role (string), difficulty ("easy" | "medium" | "hard"),
+ * duration ("30" | "60" | "90", minutes)
  *
  * A plain route rather than a server action because it needs to accept
  * a file upload - parses the resume, kicks off the interview with the
@@ -41,6 +44,12 @@ export async function POST(request: NextRequest) {
       | "easy"
       | "medium"
       | "hard";
+    const durationParsed = Number(formData.get("duration"));
+    const durationMinutes: InterviewDurationMinutes = VALID_DURATIONS.includes(
+      durationParsed as InterviewDurationMinutes
+    )
+      ? (durationParsed as InterviewDurationMinutes)
+      : 30;
 
     if (!resumeFile) {
       return NextResponse.json({ error: "Upload a resume file (PDF or DOCX)" }, { status: 400 });
@@ -75,12 +84,15 @@ export async function POST(request: NextRequest) {
       skills,
       role,
       difficulty,
+      durationMinutes,
       firstQuestion,
     });
 
     return NextResponse.json({
       sessionId: doc._id.toString(),
       question: firstQuestion,
+      durationMinutes: doc.durationMinutes,
+      startedAt: doc.createdAt.toISOString(),
     });
   } catch (error) {
     console.error("[api/interview/start] Error:", error);

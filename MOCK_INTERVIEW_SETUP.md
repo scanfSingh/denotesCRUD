@@ -25,9 +25,29 @@ resume file (PDF/DOCX) ──▶ app/api/interview/start ──▶ lib/interview
 ```
 
 Each interview is a single MongoDB document (`interviewSessions` collection):
-resume text, chosen skills/role/difficulty, the full question/answer
-transcript, and - once finished - a summary, strengths, improvements, and a
-1-10 score.
+resume text, chosen skills/role/difficulty, chosen duration, the full
+question/answer transcript, and - once finished - a summary, strengths,
+improvements, and a 1-10 score.
+
+### Duration (30 / 60 / 90 minutes)
+
+The candidate picks a duration on the setup screen. `durationMinutes` is
+stored on the session document at creation time, and the interview ends
+automatically - triggering final feedback - whichever comes first:
+
+- **Time runs out**: `isInterviewTimeUp()` (`lib/interview/store.ts`) compares
+  `createdAt + durationMinutes` against the current time. It's checked
+  server-side on every answer submission (`submitInterviewAnswer` in
+  `app/interview-actions.ts`), so it's enforced even if the client's own
+  countdown is tampered with or closed.
+- **The turn-count ceiling** (`INTERVIEW_MAX_TURNS`, default 40) is hit - a
+  defensive backstop only, high enough that a normal 30/60/90-minute
+  interview never reaches it.
+
+The client mirrors the same deadline for a live countdown in the interview
+header (turns red in the last minute) and auto-ends the interview the moment
+it hits zero, via the same "end early" flow the candidate's own "End
+interview" button uses.
 
 ## Step 1: Install the new dependencies
 
@@ -63,7 +83,7 @@ needed to turn it on/off later.
 Once the flag is on, "Mock Interview" appears in the nav and as a home-screen
 quick action. Upload a resume (PDF or DOCX only - legacy `.doc` and scanned
 image PDFs aren't supported), optionally list skills to focus on, pick a
-difficulty, and start.
+difficulty and a duration (30/60/90 minutes), and start.
 
 Each question can be answered either by typing or - via the "Speak" toggle
 above the answer box - by voice: it reuses the same `AudioRecorder` component

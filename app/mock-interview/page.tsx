@@ -25,6 +25,14 @@ interface Feedback {
 }
 
 type Phase = "setup" | "interview" | "feedback";
+type Duration = 30 | 60 | 90;
+
+function formatCountdown(totalSeconds: number): string {
+  const clamped = Math.max(0, totalSeconds);
+  const mins = Math.floor(clamped / 60);
+  const secs = clamped % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 // Keep in sync with INTERVIEW_MAX_RESUME_BYTES / lib/interview/config.ts -
 // checked here too so a bad file is caught before the upload round trip,
@@ -54,6 +62,7 @@ export default function MockInterviewPage() {
   const [role, setRole] = useState("");
   const [skills, setSkills] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [duration, setDuration] = useState<Duration>(30);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -69,6 +78,12 @@ export default function MockInterviewPage() {
   // transcript still lands in the same editable textarea rather than
   // auto-submitting, so a misheard word can be fixed before sending.
   const [answerMode, setAnswerMode] = useState<"type" | "speak">("type");
+  // Epoch ms when the chosen duration runs out - set from the server's
+  // own startedAt + durationMinutes so the countdown matches what the
+  // backend actually enforces, not just a client-side guess.
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const autoEndedRef = useRef(false);
 
   // Feedback
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -87,6 +102,27 @@ export default function MockInterviewPage() {
   useEffect(() => {
     if (phase === "interview") answerRef.current?.focus();
   }, [phase, turns.length]);
+
+  // Countdown ticks every second while the interview is live, and
+  // auto-ends it the moment time runs out - the server enforces the
+  // same deadline independently (see isInterviewTimeUp), this is just
+  // what drives the on-screen timer and saves the candidate a click.
+  useEffect(() => {
+    if (phase !== "interview" || deadline === null) return;
+
+    const tick = () => {
+      const secondsLeft = Math.round((deadline - Date.now()) / 1000);
+      setRemainingSeconds(secondsLeft);
+      if (secondsLeft <= 0 && !autoEndedRef.current) {
+        autoEndedRef.current = true;
+        handleEndEarly();
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [phase, deadline]);
 
   if (!interview.enabled) {
     return (
@@ -119,6 +155,7 @@ export default function MockInterviewPage() {
       formData.append("skills", skills);
       formData.append("role", role || "Software Engineer");
       formData.append("difficulty", difficulty);
+      formData.append("duration", String(duration));
 
       const res = await fetch("/api/interview/start", { method: "POST", body: formData });
       const data = await res.json();
@@ -126,6 +163,8 @@ export default function MockInterviewPage() {
 
       setSessionId(data.sessionId);
       setTurns([{ question: data.question }]);
+      autoEndedRef.current = false;
+      setDeadline(new Date(data.startedAt).getTime() + data.durationMinutes * 60_000);
       setPhase("interview");
     } catch (err) {
       setSetupError(err instanceof Error ? err.message : "Failed to start the interview");
@@ -194,6 +233,9 @@ export default function MockInterviewPage() {
     setFeedback(null);
     setInterviewError(null);
     setResumeFile(null);
+    setDeadline(null);
+    setRemainingSeconds(null);
+    autoEndedRef.current = false;
     getMyInterviewSessions().then(setPastSessions).catch(() => {});
   }
 
@@ -284,6 +326,29 @@ export default function MockInterviewPage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1.5">Duration</label>
+                  <div className="flex gap-2">
+                    {([30, 60, 90] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDuration(d)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          duration === d
+                            ? "bg-purple-600 text-white"
+                            : "bg-white/[0.04] text-slate-400 border border-white/[0.08] hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        {d} min
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    The interview wraps up automatically and gives you feedback once time is up.
+                  </p>
+                </div>
+
                 {setupError && <p className="text-xs text-red-400">{setupError}</p>}
 
                 <button
@@ -307,7 +372,7 @@ export default function MockInterviewPage() {
                         <div>
                           <p className="text-sm text-white">{s.role}</p>
                           <p className="text-xs text-slate-500 capitalize">
-                            {s.difficulty} · {new Date(s.createdAt).toLocaleDateString()}
+                            {s.difficulty} · {s.durationMinutes} min · {new Date(s.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                         {s.status === "completed" && typeof s.score === "number" ? (
@@ -326,7 +391,20 @@ export default function MockInterviewPage() {
           {phase === "interview" && (
             <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.08] via-white/[0.03] to-transparent overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-purple-600 to-indigo-600">
-                <p className="text-sm font-semibold text-white">Question {turns.length}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-semibold text-white">Question {turns.length}</p>
+                  {remainingSeconds !== null && (
+                    <span
+                      className={`text-xs font-mono tabular-nums px-2 py-0.5 rounded-full ${
+                        remainingSeconds <= 60
+                          ? "bg-red-500/90 text-white animate-pulse"
+                          : "bg-black/20 text-purple-100"
+                      }`}
+                    >
+                      {formatCountdown(remainingSeconds)}
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={handleEndEarly}
                   disabled={submitting}
