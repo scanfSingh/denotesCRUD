@@ -65,6 +65,15 @@ quick action. Upload a resume (PDF or DOCX only - legacy `.doc` and scanned
 image PDFs aren't supported), optionally list skills to focus on, pick a
 difficulty, and start.
 
+Each question can be answered either by typing or - via the "Speak" toggle
+above the answer box - by voice: it reuses the same `AudioRecorder` component
+and browser Speech Recognition API as the audio notes feature, so there's no
+separate backend transcription call. The transcript lands in the same
+editable textarea rather than auto-submitting, so a misheard word can be
+fixed before sending. Voice mode needs a Speech-Recognition-capable browser
+(Chrome, Edge, or Safari) and microphone permission - unsupported browsers
+fall back to a message and the candidate can just type instead.
+
 ## Notes on deploying to Vercel
 
 - `app/api/interview/start/route.ts` runs on the **Node.js runtime**
@@ -78,9 +87,6 @@ difficulty, and start.
 
 ## Extending this
 
-- **Voice mode**: reuse the existing audio transcription route
-  (`app/api/audio/transcribe/route.ts`) to let candidates answer by voice
-  instead of typing.
 - **Role-specific question banks**: right now every question is generated
   fresh by the LLM; a curated question bank per role could be blended in
   for more consistency across interviews.

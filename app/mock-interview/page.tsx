@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
+import AudioRecorder from "../components/AudioRecorder";
 import { useFeatureFlags } from "../components/FeatureFlagsProvider";
 import {
   submitInterviewAnswer,
@@ -64,6 +65,10 @@ export default function MockInterviewPage() {
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [interviewError, setInterviewError] = useState<string | null>(null);
+  // "speak" shows the microphone recorder above the textarea - the
+  // transcript still lands in the same editable textarea rather than
+  // auto-submitting, so a misheard word can be fixed before sending.
+  const [answerMode, setAnswerMode] = useState<"type" | "speak">("type");
 
   // Feedback
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -361,12 +366,53 @@ export default function MockInterviewPage() {
                 {interviewError && <p className="text-xs text-red-400">{interviewError}</p>}
               </div>
 
-              <form onSubmit={handleSubmitAnswer} className="border-t border-white/[0.06] px-5 py-3 space-y-2">
+              <form onSubmit={handleSubmitAnswer} className="border-t border-white/[0.06] px-5 py-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAnswerMode("type")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      answerMode === "type"
+                        ? "bg-purple-600 text-white"
+                        : "bg-white/[0.04] text-slate-400 border border-white/[0.08] hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h.01M12 12h.01M15 12h.01M17 20H7a2 2 0 01-2-2V8a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2z" />
+                    </svg>
+                    Type
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnswerMode("speak")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      answerMode === "speak"
+                        ? "bg-purple-600 text-white"
+                        : "bg-white/[0.04] text-slate-400 border border-white/[0.08] hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0M12 18v3m-4 0h8M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                    </svg>
+                    Speak
+                  </button>
+                </div>
+
+                {answerMode === "speak" && (
+                  <AudioRecorder
+                    showLivePreview
+                    onTranscriptionComplete={(transcription) =>
+                      setAnswer((prev) => (prev ? `${prev} ${transcription}` : transcription))
+                    }
+                    onError={(err) => setInterviewError(err)}
+                  />
+                )}
+
                 <textarea
                   ref={answerRef}
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  placeholder="Type your answer..."
+                  placeholder={answerMode === "speak" ? "Your transcribed answer will appear here - edit if needed..." : "Type your answer..."}
                   disabled={submitting}
                   rows={3}
                   className="w-full resize-none rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none"
