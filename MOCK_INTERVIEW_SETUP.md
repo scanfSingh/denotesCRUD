@@ -22,6 +22,13 @@ resume file (PDF/DOCX) ──▶ app/api/interview/start ──▶ lib/interview
        user answers ──▶ app/interview-actions.ts ──▶ next question,
                           submitInterviewAnswer()      or final feedback
                                                         after N turns
+                                                             │
+                                                             ▼
+                                          lib/interview/insightsGenerator.ts
+                                          (on demand, across ALL completed
+                                           sessions) ──▶ interviewInsights
+                                                          (MongoDB, cached
+                                                           per user)
 ```
 
 Each interview is a single MongoDB document (`interviewSessions` collection):
@@ -66,6 +73,32 @@ The client mirrors the same deadline for a live countdown in the interview
 header (turns red in the last minute) and auto-ends the interview the moment
 it hits zero, via the same "end early" flow the candidate's own "End
 interview" button uses.
+
+### Cumulative learning plan
+
+Beyond a single interview's feedback, the candidate can see a "what to study
+next" plan built from *every* completed interview at once - so a weakness
+that keeps showing up across several interviews stands out instead of being
+buried in one session's notes.
+
+- `lib/interview/insightsGenerator.ts` collects every completed session's
+  role/skills/difficulty/score/strengths/improvements
+  (`getCompletedInterviewFeedbacks()` in `lib/interview/store.ts`) and asks
+  the same Gemini-primary/Groq-fallback setup to find recurring themes,
+  returning a short overall summary plus a prioritized list of topics
+  (`{ topic, reason, priority }`), each grounded in what the feedback
+  actually said.
+- The result is cached per user in its own `interviewInsights` collection
+  (`lib/interview/insightsStore.ts`, one document per user) rather than
+  recomputed on every page load - it only changes when the candidate asks
+  for it.
+- `getLearningInsights()` (a server action) reads the cached plan;
+  `generateMyLearningInsights()` recomputes it from the latest feedback and
+  saves it. Both are called from `app/mock-interview/page.tsx`, with a
+  "Generate"/"Refresh" control under Past Interviews, and an "Update my
+  learning plan" shortcut right after a fresh interview's own feedback.
+- Needs at least one completed interview - `generateMyLearningInsights()`
+  returns a friendly error otherwise rather than calling the LLM.
 
 ## Step 1: Install the new dependencies
 

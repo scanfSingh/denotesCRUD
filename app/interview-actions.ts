@@ -9,9 +9,12 @@ import {
   completeInterviewSession,
   listInterviewSessions,
   isInterviewTimeUp,
+  getCompletedInterviewFeedbacks,
   type InterviewFeedback,
 } from "@/lib/interview/store";
 import { interviewConfig } from "@/lib/interview/config";
+import { generateLearningInsights } from "@/lib/interview/insightsGenerator";
+import { getUserInsights, saveUserInsights, type LearningTopic } from "@/lib/interview/insightsStore";
 
 /**
  * Server actions backing the /mock-interview page. Resume upload +
@@ -145,4 +148,69 @@ export async function getMyInterviewSessions(): Promise<InterviewSummary[]> {
     score: d.feedback?.score,
     createdAt: d.createdAt.toISOString(),
   }));
+}
+
+export interface LearningInsightsSummary {
+  overallSummary: string;
+  topics: LearningTopic[];
+  basedOnSessionCount: number;
+  generatedAt: string;
+}
+
+/** The cached learning plan, if one has been generated before - doesn't
+ * call the LLM, just reads whatever's saved. */
+export async function getLearningInsights(): Promise<LearningInsightsSummary | null> {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const doc = await getUserInsights(userId);
+  if (!doc) return null;
+
+  return {
+    overallSummary: doc.overallSummary,
+    topics: doc.topics,
+    basedOnSessionCount: doc.basedOnSessionCount,
+    generatedAt: doc.generatedAt.toISOString(),
+  };
+}
+
+export type GenerateInsightsResult =
+  | { success: true; insights: LearningInsightsSummary }
+  | { success: false; error: string };
+
+/** (Re)generates the cumulative learning plan from every completed
+ * interview's feedback, and saves it as the user's current plan. */
+export async function generateMyLearningInsights(): Promise<GenerateInsightsResult> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const sessions = await getCompletedInterviewFeedbacks(userId);
+    if (sessions.length === 0) {
+      return { success: false, error: "Finish at least one interview first to get a learning plan." };
+    }
+
+    const result = await generateLearningInsights(sessions);
+    await saveUserInsights(userId, {
+      overallSummary: result.overallSummary,
+      topics: result.topics,
+      basedOnSessionCount: sessions.length,
+    });
+
+    return {
+      success: true,
+      insights: {
+        overallSummary: result.overallSummary,
+        topics: result.topics,
+        basedOnSessionCount: sessions.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  } catch (error) {
+    console.error("[interview-actions] generateMyLearningInsights failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to generate your learning plan",
+    };
+  }
 }

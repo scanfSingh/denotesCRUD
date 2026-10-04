@@ -9,7 +9,10 @@ import {
   submitInterviewAnswer,
   endInterviewEarly,
   getMyInterviewSessions,
+  getLearningInsights,
+  generateMyLearningInsights,
   type InterviewSummary,
+  type LearningInsightsSummary,
 } from "../interview-actions";
 
 interface ChatTurn {
@@ -73,6 +76,13 @@ export default function MockInterviewPage() {
   const [storedResume, setStoredResume] = useState<{ fileName: string; updatedAt: string } | null>(null);
   const [showResumeInput, setShowResumeInput] = useState(false);
 
+  // Cumulative "what to study next" plan, built from every completed
+  // interview's feedback. Cached in Mongo (not recomputed on every
+  // load) and refreshed only when the user asks.
+  const [insights, setInsights] = useState<LearningInsightsSummary | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+
   // Interview
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
@@ -98,6 +108,10 @@ export default function MockInterviewPage() {
 
   useEffect(() => {
     getMyInterviewSessions().then(setPastSessions).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getLearningInsights().then(setInsights).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -248,6 +262,23 @@ export default function MockInterviewPage() {
       }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleGenerateInsights() {
+    setInsightsLoading(true);
+    setInsightsError(null);
+    try {
+      const result = await generateMyLearningInsights();
+      if (!result.success) {
+        setInsightsError(result.error);
+        return;
+      }
+      setInsights(result.insights);
+    } catch (err) {
+      setInsightsError(err instanceof Error ? err.message : "Failed to generate your learning plan");
+    } finally {
+      setInsightsLoading(false);
     }
   }
 
@@ -444,6 +475,65 @@ export default function MockInterviewPage() {
                   </div>
                 </div>
               )}
+
+              {(insights || pastSessions.some((s) => s.status === "completed")) && (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Your learning plan</p>
+                    <button
+                      type="button"
+                      onClick={handleGenerateInsights}
+                      disabled={insightsLoading}
+                      className="text-xs font-medium text-purple-300 hover:text-purple-200 disabled:opacity-50"
+                    >
+                      {insightsLoading ? "Analyzing…" : insights ? "Refresh" : "Generate"}
+                    </button>
+                  </div>
+
+                  {insightsError && <p className="mb-2 text-xs text-red-400">{insightsError}</p>}
+
+                  {insights ? (
+                    <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.07] via-white/[0.03] to-transparent p-5">
+                      <p className="text-sm text-slate-200 leading-relaxed mb-4">{insights.overallSummary}</p>
+                      <div className="space-y-2.5">
+                        {insights.topics.map((t, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2.5"
+                          >
+                            <span
+                              className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                t.priority === "high"
+                                  ? "bg-red-500/20 text-red-300"
+                                  : t.priority === "medium"
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : "bg-slate-500/20 text-slate-300"
+                              }`}
+                            >
+                              {t.priority}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white">{t.topic}</p>
+                              <p className="text-xs text-slate-400 mt-0.5">{t.reason}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-4 text-xs text-slate-500">
+                        Based on {insights.basedOnSessionCount} interview{insights.basedOnSessionCount === 1 ? "" : "s"} · updated{" "}
+                        {new Date(insights.generatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-center">
+                      <p className="text-sm text-slate-400">
+                        See a cumulative view of the topics you keep needing to work on, based on all your
+                        past interview feedback.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 
@@ -602,6 +692,16 @@ export default function MockInterviewPage() {
                   </ul>
                 </div>
               )}
+
+              {insightsError && <p className="mb-2 text-xs text-red-400">{insightsError}</p>}
+
+              <button
+                onClick={handleGenerateInsights}
+                disabled={insightsLoading}
+                className="w-full py-2.5 mb-3 rounded-lg border border-purple-500/30 text-purple-300 hover:bg-purple-500/10 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {insightsLoading ? "Updating your learning plan…" : "Update my learning plan"}
+              </button>
 
               <button
                 onClick={resetToSetup}

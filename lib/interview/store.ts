@@ -133,3 +133,36 @@ export async function listInterviewSessions(
     .toArray();
   return docs as (InterviewSessionDoc & { _id: ObjectId })[];
 }
+
+export interface CompletedInterviewSummary {
+  role: string;
+  skills: string[];
+  difficulty: "easy" | "medium" | "hard";
+  feedback: InterviewFeedback;
+  completedAt: Date;
+}
+
+/** Every completed interview's feedback for a user, most recent first -
+ * the raw material for the cumulative "what to study next" learning
+ * plan (see lib/interview/insightsGenerator.ts). Only sessions that
+ * actually finished with feedback are included. */
+export async function getCompletedInterviewFeedbacks(
+  userId: string,
+  limit = 50
+): Promise<CompletedInterviewSummary[]> {
+  const collection = await getCollection();
+  const docs = await collection
+    .find({ userId: new ObjectId(userId), status: "completed", feedback: { $exists: true } })
+    .sort({ completedAt: -1 })
+    .limit(limit)
+    .toArray();
+  return docs
+    .filter((d): d is InterviewSessionDoc & { feedback: InterviewFeedback } => Boolean(d.feedback))
+    .map((d) => ({
+      role: d.role,
+      skills: d.skills,
+      difficulty: d.difficulty,
+      feedback: d.feedback,
+      completedAt: d.completedAt ?? d.updatedAt,
+    }));
+}
