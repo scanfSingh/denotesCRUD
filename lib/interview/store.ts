@@ -156,13 +156,24 @@ export async function getCompletedInterviewFeedbacks(
     .sort({ completedAt: -1 })
     .limit(limit)
     .toArray();
-  return docs
-    .filter((d): d is InterviewSessionDoc & { feedback: InterviewFeedback } => Boolean(d.feedback))
-    .map((d) => ({
+
+  // A plain loop with an early `continue` narrows d.feedback reliably.
+  // (A previous version used a .filter() type predicate asserting
+  // `InterviewSessionDoc & { feedback: InterviewFeedback }`, but
+  // .toArray() actually yields WithId<InterviewSessionDoc> - which
+  // requires _id, unlike the optional _id on InterviewSessionDoc - so
+  // the predicate's type wasn't assignable to the real parameter type
+  // and TypeScript silently didn't narrow through the subsequent .map().)
+  const summaries: CompletedInterviewSummary[] = [];
+  for (const d of docs) {
+    if (!d.feedback) continue;
+    summaries.push({
       role: d.role,
       skills: d.skills,
       difficulty: d.difficulty,
       feedback: d.feedback,
       completedAt: d.completedAt ?? d.updatedAt,
-    }));
+    });
+  }
+  return summaries;
 }
