@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "download-whisper": "node scripts/download-whisper-model.js",
-    "rag:ingest": "node scripts/ingest-rag-content.js"
+    "rag:ingest": "node scripts/ingest-rag-content.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",
@@ -41,13 +44,20 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.12",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/bcryptjs": "^2.4.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.1",
     "eslint": "^9.34.0",
     "eslint-config-next": "latest",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
     "tailwindcss": "^4.1.12",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
 }
