@@ -147,6 +147,20 @@ fixed before sending. Voice mode needs a Speech-Recognition-capable browser
 (Chrome, Edge, or Safari) and microphone permission - unsupported browsers
 fall back to a message and the candidate can just type instead.
 
+## Interview behaviour notes
+
+- **Ending an interview** asks for confirmation first. When the timer runs
+  out the interview ends automatically (no confirmation) and a "Time's up"
+  notice is shown.
+- **Zero answers**: ending with no answered questions skips the LLM, stores
+  no score or feedback (`endedWithoutAnswers: true`), and the session is
+  never included in the learning plan. Past rows show "Ended - no answers".
+- **Failed submits** keep the typed answer in the textarea. Cmd/Ctrl+Enter
+  submits an answer.
+- **Past interviews**: completed sessions with feedback open a detail view
+  (score, feedback, full transcript) via the `getMyInterviewDetail` action,
+  which only returns sessions owned by the signed-in user.
+
 ## Notes on deploying to Vercel
 
 - `app/api/interview/start/route.ts` runs on the **Node.js runtime**

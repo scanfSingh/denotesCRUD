@@ -7,11 +7,13 @@ import {
   appendQuestion,
   answerLastTurn,
   completeInterviewSession,
+  completeInterviewWithoutFeedback,
   listInterviewSessions,
   isInterviewTimeUp,
   getCompletedInterviewFeedbacks,
   type InterviewFeedback,
 } from "@/lib/interview/store";
+import { countAnsweredTurns, isValidSessionId, toInterviewDetail } from "@/lib/interview/sessionView";
 import { interviewConfig } from "@/lib/interview/config";
 import { generateLearningInsights } from "@/lib/interview/insightsGenerator";
 import { getUserInsights, saveUserInsights, type LearningTopic } from "@/lib/interview/insightsStore";
@@ -79,9 +81,12 @@ export async function submitInterviewAnswer(
   }
 }
 
-export async function endInterviewEarly(
-  sessionId: string
-): Promise<{ success: true; feedback: InterviewFeedback } | { success: false; error: string }> {
+export type EndInterviewResult =
+  | { success: true; feedback: InterviewFeedback; noAnswers?: false }
+  | { success: true; noAnswers: true }
+  | { success: false; error: string };
+
+export async function endInterviewEarly(sessionId: string): Promise<EndInterviewResult> {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: "Unauthorized" };
@@ -89,14 +94,19 @@ export async function endInterviewEarly(
     const doc = await getInterviewSession(sessionId, userId);
     if (!doc) return { success: false, error: "Interview not found" };
     if (doc.status === "completed") {
-      return doc.feedback
-        ? { success: true, feedback: doc.feedback }
+      if (doc.feedback) return { success: true, feedback: doc.feedback };
+      return doc.endedWithoutAnswers
+        ? { success: true, noAnswers: true }
         : { success: false, error: "This interview already ended" };
     }
 
     // Drop a trailing unanswered question so the model evaluates only
     // what was actually answered.
     const answeredTurns = doc.turns.filter((t) => t.answer);
+    if (countAnsweredTurns(doc.turns) === 0) {
+      await completeInterviewWithoutFeedback(sessionId);
+      return { success: true, noAnswers: true };
+    }
     const result = await generateInterviewTurn(
       {
         resumeText: doc.resumeText,
@@ -131,6 +141,7 @@ export interface InterviewSummary {
   durationMinutes: number;
   status: "in_progress" | "completed";
   score?: number;
+  endedWithoutAnswers?: boolean;
   createdAt: string;
 }
 
@@ -146,8 +157,38 @@ export async function getMyInterviewSessions(): Promise<InterviewSummary[]> {
     durationMinutes: d.durationMinutes,
     status: d.status,
     score: d.feedback?.score,
+    endedWithoutAnswers: d.endedWithoutAnswers,
     createdAt: d.createdAt.toISOString(),
   }));
+}
+
+export interface InterviewDetail {
+  id: string;
+  role: string;
+  difficulty: string;
+  durationMinutes: number;
+  createdAt: string;
+  completedAt?: string;
+  feedback: InterviewFeedback;
+  turns: { question: string; answer?: string }[];
+}
+
+/** Full detail of one of the signed-in user's completed interviews, or
+ * null if unauthenticated, invalid id, not owned, not completed, or
+ * without feedback. Never includes resume text. */
+export async function getMyInterviewDetail(sessionId: string): Promise<InterviewDetail | null> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+    if (!isValidSessionId(sessionId)) return null;
+
+    const doc = await getInterviewSession(sessionId, userId);
+    if (!doc || doc.status !== "completed" || !doc.feedback) return null;
+    return toInterviewDetail({ ...doc, feedback: doc.feedback });
+  } catch (error) {
+    console.error("[interview-actions] getMyInterviewDetail failed:", error);
+    return null;
+  }
 }
 
 export interface LearningInsightsSummary {

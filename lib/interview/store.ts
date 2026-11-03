@@ -33,6 +33,8 @@ export interface InterviewSessionDoc {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+  /** Set when the interview was ended with zero answered turns; no feedback is stored. */
+  endedWithoutAnswers?: boolean;
 }
 
 async function getCollection(): Promise<Collection<InterviewSessionDoc>> {
@@ -118,6 +120,17 @@ export async function completeInterviewSession(
   await collection.updateOne(
     { _id: new ObjectId(sessionId) },
     { $set: { status: "completed", feedback, updatedAt: now, completedAt: now } }
+  );
+}
+
+/** Marks a session completed without feedback (zero answered turns).
+ * No `feedback` is written, so the session never feeds the learning plan. */
+export async function completeInterviewWithoutFeedback(sessionId: string): Promise<void> {
+  const collection = await getCollection();
+  const now = new Date();
+  await collection.updateOne(
+    { _id: new ObjectId(sessionId) },
+    { $set: { status: "completed", endedWithoutAnswers: true, updatedAt: now, completedAt: now } }
   );
 }
 
