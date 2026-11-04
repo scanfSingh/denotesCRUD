@@ -161,6 +161,29 @@ fall back to a message and the candidate can just type instead.
   (score, feedback, full transcript) via the `getMyInterviewDetail` action,
   which only returns sessions owned by the signed-in user.
 
+## Video interview (optional, `interview.video`)
+
+Set `NEXT_PUBLIC_FF_INTERVIEW_VIDEO=true` (or flip `interview.video` in the
+admin flag dashboard) to turn on Level 1 "video interview":
+
+- **Self-view camera**: a local preview using `getUserMedia({ video: true })`
+  once the interview starts. If permission is denied or there is no camera,
+  a notice is shown and the interview continues text-only. The camera can be
+  toggled off, and is stopped when the interview ends or the page is left.
+- **Spoken questions**: each question is read aloud. The first use downloads
+  the Kokoro voice model (`onnx-community/Kokoro-82M-v1.0-ONNX`, roughly 90 MB)
+  from the Hugging Face CDN, then the browser caches it. While it loads, and
+  if it fails or is unsupported, the browser's built-in `speechSynthesis`
+  voice is used. "Mute interviewer" and "Replay question" controls are
+  provided.
+- **Privacy**: nothing is recorded, stored or uploaded. Video stays in the
+  browser; the only network traffic added is the model download.
+- **Speak answers**: the microphone recorder is disabled while the
+  interviewer is speaking so its voice is not transcribed. Headphones are
+  recommended to avoid echo.
+- `NEXT_PUBLIC_*` flags are inlined at build time; restart/rebuild after
+  changing the env var.
+
 ## Notes on deploying to Vercel
 
 - `app/api/interview/start/route.ts` runs on the **Node.js runtime**

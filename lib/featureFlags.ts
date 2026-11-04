@@ -91,6 +91,11 @@ export const featureFlags = {
     /** Enable the mock interview page. Off by default since it needs
      * GEMINI_API_KEY/GROQ_API_KEY configured. */
     enabled: process.env.NEXT_PUBLIC_FF_INTERVIEW === "true",
+
+    /** Level 1 "video interview": self-view webcam + spoken questions
+     * (Kokoro TTS in-browser). Off by default: it prompts for the camera
+     * and downloads a ~90 MB model on first use. */
+    video: process.env.NEXT_PUBLIC_FF_INTERVIEW_VIDEO === "true",
   },
 
   // UI Features
