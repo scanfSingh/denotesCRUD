@@ -58,12 +58,16 @@ interface AudioRecorderProps {
   onTranscriptionComplete: (transcription: string) => void;
   onError?: (error: string) => void;
   showLivePreview?: boolean;
+  /** Blocks starting and stops an active recording (e.g. while the
+   * interviewer's TTS is playing so it isn't transcribed). */
+  disabled?: boolean;
 }
 
 export default function AudioRecorder({
   onTranscriptionComplete,
   onError,
   showLivePreview = true,
+  disabled = false,
 }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -163,7 +167,16 @@ export default function AudioRecorder({
     }
   }, [isRecording]);
 
+  // Stop (keeping the partial transcript) when disabled flips on mid-recording
+  useEffect(() => {
+    if (disabled && isRecording) {
+      stopRecording();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
+
   const startRecording = async () => {
+    if (disabled) return;
     if (!recognitionRef.current) {
       onError?.("Speech recognition not available");
       return;
@@ -263,7 +276,7 @@ export default function AudioRecorder({
           ) : (
             <button
               onClick={startRecording}
-              disabled={isSupported === null}
+              disabled={isSupported === null || disabled}
               className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Start Recording"
             >

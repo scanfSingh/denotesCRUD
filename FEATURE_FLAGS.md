@@ -54,6 +54,9 @@ Add these to your `.env.local` file. Set to `"false"` to disable a feature, or `
 | `NEXT_PUBLIC_FF_DARK_MODE` | `true` | Enable dark mode toggle |
 | `NEXT_PUBLIC_FF_API_STATUS` | `true` | Show API status indicator |
 
+### Mock Interview Video (Level 1)
+- `NEXT_PUBLIC_FF_INTERVIEW_VIDEO` (`interview.video`, default **off**; set to `"true"` to enable): shows a local webcam self-view and speaks each interview question aloud. Requires `interview.enabled`. Also toggleable from the admin flag dashboard. See MOCK_INTERVIEW_SETUP.md.
+
 ### Navigation Features
 
 | Flag | Default | Description |

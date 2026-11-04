@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Navigation from "../components/Navigation";
 import AudioRecorder from "../components/AudioRecorder";
+import InterviewVideoPanel from "./InterviewVideoPanel";
+import * as tts from "@/lib/interview/tts";
+import { useInterviewMedia } from "@/lib/interview/useInterviewMedia";
+import { useInterviewerVoice } from "@/lib/interview/useInterviewerVoice";
 import { useFeatureFlags } from "../components/FeatureFlagsProvider";
 import {
   submitInterviewAnswer,
@@ -220,6 +224,27 @@ export default function MockInterviewPage() {
     return () => clearInterval(interval);
   }, [phase, deadline]);
 
+  // Level 1 video interview (camera self-view + spoken questions). Hooks
+  // are always called, but do nothing unless the flag is on.
+  const videoOn = Boolean(interview.video);
+  const media = useInterviewMedia(videoOn && phase === "interview");
+  const voice = useInterviewerVoice();
+  const { speakQuestion, cancel: cancelVoice } = voice;
+  const latestQuestion = turns.length > 0 ? turns[turns.length - 1].question : "";
+
+  // Speak each new question (first + follow-ups) unless muted.
+  useEffect(() => {
+    if (!videoOn || phase !== "interview" || !latestQuestion) return;
+    speakQuestion(latestQuestion);
+    // Keyed on the question count so re-renders never re-speak.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoOn, phase, turns.length]);
+
+  // Silence the interviewer once the interview is over / left.
+  useEffect(() => {
+    if (videoOn && phase !== "interview") cancelVoice();
+  }, [videoOn, phase, cancelVoice]);
+
   if (!interview.enabled) {
     return (
       <ProtectedRoute>
@@ -248,6 +273,10 @@ export default function MockInterviewPage() {
         return;
       }
     }
+
+    // Must run synchronously inside the click handler (before any await)
+    // so the browser allows audio playback for the first question.
+    if (videoOn) tts.prime();
 
     setStarting(true);
     try {
@@ -292,6 +321,7 @@ export default function MockInterviewPage() {
     setInterviewError(null);
     setSubmitting(true);
     setPendingAnswer(trimmed);
+    if (videoOn) cancelVoice();
 
     try {
       const result = await submitInterviewAnswer(sessionId, trimmed);
@@ -338,6 +368,7 @@ export default function MockInterviewPage() {
     setShowEndConfirm(false);
     setInterviewError(null);
     setSubmitting(true);
+    if (videoOn) cancelVoice();
     try {
       const result = await endInterviewEarly(sessionId);
       if (!result.success) {
@@ -779,6 +810,20 @@ export default function MockInterviewPage() {
                 </div>
               )}
 
+              {videoOn && (
+                <InterviewVideoPanel
+                  stream={media.stream}
+                  cameraStatus={media.status}
+                  cameraOn={media.cameraOn}
+                  onToggleCamera={media.toggleCamera}
+                  voiceState={voice.state}
+                  muted={voice.muted}
+                  onToggleMute={() => voice.setMuted(!voice.muted)}
+                  onReplay={voice.replay}
+                  voiceSupported={voice.isSupported()}
+                />
+              )}
+
               <div
                 ref={scrollRef}
                 role="log"
@@ -855,6 +900,7 @@ export default function MockInterviewPage() {
                 {answerMode === "speak" && (
                   <AudioRecorder
                     showLivePreview
+                    disabled={voice.state === "speaking"}
                     onTranscriptionComplete={(transcription) =>
                       setAnswer((prev) => (prev ? `${prev} ${transcription}` : transcription))
                     }
