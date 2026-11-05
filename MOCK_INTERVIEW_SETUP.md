@@ -161,10 +161,13 @@ fall back to a message and the candidate can just type instead.
   (score, feedback, full transcript) via the `getMyInterviewDetail` action,
   which only returns sessions owned by the signed-in user.
 
-## Video interview (optional, `interview.video`)
+## Video interview (`interview.video`, on by default)
 
-Set `NEXT_PUBLIC_FF_INTERVIEW_VIDEO=true` (or flip `interview.video` in the
-admin flag dashboard) to turn on Level 1 "video interview":
+Level 1 "video interview" is enabled by default. Set
+`NEXT_PUBLIC_FF_INTERVIEW_VIDEO=false` (or flip `interview.video` in the admin
+flag dashboard) to turn it off. The env var is only the factory default used
+when the settings document is first created; once it exists, the dashboard
+value wins.
 
 - **Self-view camera**: a local preview using `getUserMedia({ video: true })`
   once the interview starts. If permission is denied or there is no camera,
