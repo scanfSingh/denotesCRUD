@@ -93,9 +93,10 @@ export const featureFlags = {
     enabled: process.env.NEXT_PUBLIC_FF_INTERVIEW === "true",
 
     /** Level 1 "video interview": self-view webcam + spoken questions
-     * (Kokoro TTS in-browser). Off by default: it prompts for the camera
-     * and downloads a ~90 MB model on first use. */
-    video: process.env.NEXT_PUBLIC_FF_INTERVIEW_VIDEO === "true",
+     * (Kokoro TTS in-browser). On by default; set the env var to "false"
+     * (or flip it in the admin dashboard) to turn it off. It prompts for
+     * the camera and downloads a ~90 MB model on first use. */
+    video: process.env.NEXT_PUBLIC_FF_INTERVIEW_VIDEO !== "false",
   },
 
   // UI Features
